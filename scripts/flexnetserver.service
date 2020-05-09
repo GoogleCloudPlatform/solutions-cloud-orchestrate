@@ -1,0 +1,10 @@
+[Unit]
+Description=Autodesk flex network license server.
+
+[Service]
+Type=forking
+ExecStart=/opt/flexnetserver/lmgrd -c /opt/licenses/autodesk.lic -l /var/log/flexnetserver/server.log
+ExecStop=/opt/flexnetserver/lmutil lmdown -q -force
+
+[Install]
+WantedBy=multi-user.target

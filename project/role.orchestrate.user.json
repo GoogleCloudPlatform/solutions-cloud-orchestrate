@@ -1,0 +1,22 @@
+{
+  "title": "Orchestrate User",
+  "description": "Create instances and do basic lifecycle management of resources they own.",
+  "includedPermissions": [
+    "compute.instanceTemplates.list",
+    "compute.instanceTemplates.get",
+    "compute.instances.list",
+    "compute.instances.get",
+    "compute.instances.create",
+    "compute.instances.delete",
+    "compute.instances.setDeletionProtection",
+    "compute.instances.setLabels",
+    "compute.instances.setMetadata",
+    "compute.instances.setServiceAccount",
+    "compute.instances.setTags",
+    "compute.instances.stop",
+    "compute.disks.create",
+    "compute.subnetworks.use",
+    "compute.subnetworks.useExternalIp"
+  ],
+  "stage": "ALPHA"
+}

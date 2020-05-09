@@ -1,0 +1,8 @@
+{
+  "title": "Orchestrate Pre-release Installer",
+  "description": "Grant access to installers of non-public pre-release versions of Orchestrate for a POC strictly under NDA and signed Software Evaluation Agreement.",
+  "includedPermissions": [
+    "cloudkms.cryptoKeyVersions.useToDecrypt"
+  ],
+  "stage": "ALPHA"
+}

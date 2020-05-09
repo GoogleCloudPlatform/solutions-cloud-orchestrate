@@ -1,0 +1,15 @@
+cloudbuild.googleapis.com
+clouderrorreporting.googleapis.com
+cloudfunctions.googleapis.com
+cloudkms.googleapis.com
+cloudresourcemanager.googleapis.com
+compute.googleapis.com
+container.googleapis.com
+iap.googleapis.com
+logging.googleapis.com
+monitoring.googleapis.com
+oslogin.googleapis.com
+pubsub.googleapis.com
+servicecontrol.googleapis.com
+servicemanagement.googleapis.com
+serviceusage.googleapis.com

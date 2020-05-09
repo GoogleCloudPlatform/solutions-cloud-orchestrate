@@ -1,0 +1,8 @@
+{
+  "title": "Orchestrate Project",
+  "description": "Projects orchestrated by Orchestrate are granted very specific permissions on the main Orchestrate orchestration project.",
+  "includedPermissions": [
+    "pubsub.topics.publish"
+  ],
+  "stage": "ALPHA"
+}

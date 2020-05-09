@@ -1,0 +1,30 @@
+{
+  "title": "Orchestrate Resource Manager",
+  "description": "Create instance templates, instances, and manage the lifecycle resources created by users.",
+  "includedPermissions": [
+    "compute.acceleratorTypes.list",
+    "compute.images.list",
+    "compute.images.get",
+    "compute.images.create",
+    "compute.images.delete",
+    "compute.images.getFromFamily",
+    "compute.images.useReadOnly",
+    "compute.instanceTemplates.list",
+    "compute.instanceTemplates.get",
+    "compute.instanceTemplates.create",
+    "compute.instanceTemplates.delete",
+    "compute.instances.list",
+    "compute.instances.get",
+    "compute.instances.create",
+    "compute.instances.delete",
+    "compute.instances.setLabels",
+    "compute.instances.setMetadata",
+    "compute.instances.setServiceAccount",
+    "compute.instances.setTags",
+    "compute.instances.stop",
+    "compute.disks.create",
+    "compute.subnetworks.use",
+    "compute.subnetworks.useExternalIp"
+  ],
+  "stage": "ALPHA"
+}

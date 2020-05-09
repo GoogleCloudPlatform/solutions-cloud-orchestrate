@@ -1,0 +1,13 @@
+*.pyc
+.sw*
+*.diff
+__pycache__
+.pytest_cache
+attic/
+*_pb2.py
+*_pb2_grpc.py
+api/api_descriptor.pb
+cli/build/
+cli/dist/
+cli/.eggs/
+cli/orchestratecli.egg-info/

@@ -1,0 +1,19 @@
+{
+  "title": "Orchestrate Security Admin",
+  "description": "Intended for the main Orchestrate service account to perform security-releated operations.",
+  "includedPermissions": [
+    "cloudkms.cryptoKeyVersions.useToEncrypt",
+    "resourcemanager.projects.get",
+    "resourcemanager.projects.getIamPolicy",
+    "resourcemanager.projects.setIamPolicy",
+    "storage.buckets.get",
+    "storage.buckets.getIamPolicy",
+    "storage.buckets.list",
+    "storage.buckets.setIamPolicy",
+    "storage.objects.create",
+    "storage.objects.delete",
+    "storage.objects.get",
+    "storage.objects.list"
+  ],
+  "stage": "ALPHA"
+}

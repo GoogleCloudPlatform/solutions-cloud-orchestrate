@@ -1,0 +1,2 @@
+include orchestrate/scripts/systems/README.md
+include orchestrate/scripts/systems/*.sh

@@ -1,0 +1,7 @@
+google-api-python-client
+google-cloud-error-reporting
+google-cloud-kms
+google-cloud-pubsub
+grpcio
+grpcio-tools
+oauth2client

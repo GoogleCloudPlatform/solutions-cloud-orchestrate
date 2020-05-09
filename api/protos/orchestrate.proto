@@ -1,0 +1,345 @@
+// Copyright 2020 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package orchestrate;
+
+/**
+ * The Orchestrate orchestration service.
+ *
+ * Orchestrate provides a higher-level of abastraction and a simplified user
+ * experience to orchestrate compute, storage and identity. Provides
+ * functionality that does not currently exist in the gcloud REST API or the
+ * gcloud SDK. The following examples illustrate which one is the best tool
+ * depending on the operation:
+ *
+ * IMAGES:
+ *
+ * 1. A user would use Orchestrate to create an image that is automatically
+ *    provisioned with domain-specific software, because this is a higher-level
+ *    value-added feature on top of gcloud:
+ *
+ *     orchestrate images create ...
+ *
+ * 2. Once the image is created, all subsequent lifecylce management operations
+ *    on the image would be performed directly using gcloud, e.g.:
+ *
+ *     gcloud compute images add-labels ...
+ *     gcloud compute images deprecate ...
+ *     gcloud compute images delete ...
+ *     etc.
+ *
+ * TEMPLATES:
+ *
+ * Templates in Orchestrate are more like a family of different instance sizes
+ * that * share common creation parameters. For instance, the template "vfx"
+ * could have * three sizes: small, medium, and large. Under the hood,
+ * Orchestrate will manage individual instance-templates, i.e. one for each
+ * size. Therefore, users would use Orchestrate to create templates and manage
+ * size because this is value added functionality on top of GCP:
+ *
+ * 1. User would use Orchestrate to create template:
+ *
+ *     orchestrate templates create ...
+ *
+ * 2. Use orchestrate to manage sizes provided by template:
+ *
+ *     orchestrate templates add-size TEMPLATE ...
+ *     orchestrate templates delete-size TEMPLATE ...
+ *     orchestrate templates set-default-size TEMPLATE ...
+ *
+ * 3. Use Orchestrate to delete templates and all the underlying gcloud
+ *    templates that collectively implement a Orchestrate template:
+ *
+ *     orchestrate templates delete TEMPLATE
+ */
+service Orchestrate {
+  /**
+   * Create an image provisioned with end-user applications ready to remote in.
+   */
+  rpc CreateImage(CreateImageRequest) returns (CreateImageResponse) {}
+
+  /**
+   * Create a template for simplifying instance creation.
+   */
+  rpc CreateTemplate(CreateTemplateRequest) returns (CreateTemplateResponse) {}
+
+  /**
+   * Delete a template by name.
+   */
+  rpc DeleteTemplate(DeleteTemplateRequest) returns (DeleteTemplateResponse) {}
+
+  /**
+   * Create an instance from a template.
+   */
+  rpc CreateInstance(CreateInstanceRequest) returns (CreateInstanceResponse) {}
+
+  /**
+   * Register a project for orchestration.
+   */
+  rpc RegisterProject(RegisterProjectRequest)
+      returns (RegisterProjectResponse) {}
+
+  /**
+   * Deregister a project from orchestration.
+   */
+  rpc DeregisterProject(DeregisterProjectRequest)
+      returns (DeregisterProjectResponse) {}
+}
+
+/**
+ * Metadata compatible with GCP instances and instanceTemplates.
+ */
+message Metadata {
+  string key = 1;
+  string value = 2;
+}
+
+/**
+ * Parameters for image provisioning and creation.
+ *
+ * Example transcoded payload:
+ * {
+ *   "image": {
+ *     "project": "orchestrate-test-1",
+ *     "zone": "us-central1-a",
+ *     "name": "test-centos-7-visual-1",
+ *     "image_family": "centos-7",
+ *     "image_project": "centos-cloud",
+ *     "steps": [
+ *       "tools",
+ *       "teradici",
+ *       "maya",
+ *       "nuke",
+ *       "houidini",
+ *       "zync"
+ *       ],
+ *     "metadata": {
+ *       "teradici_registration_code": "1234",
+ *       "maya_license_server": "maya.license",
+ *       "nuke_license": "nuke.license",
+ *       "rv_license": "rv.license"
+ *     },
+ *     "disk_size": 200,
+ *     "network": "workstations",
+ *     "os_type": CreateImageRequest.Image.LINUX,
+ *     "api_project": "customer-gcp-project",
+ *   }
+ * }
+ */
+message CreateImageRequest {
+  Image image = 1;
+
+  message Image {
+    string project = 1;
+    string zone = 2;
+    string name = 3;
+    string image_family = 4;
+    string image_project = 5;
+    repeated string steps = 6;
+    repeated Metadata metadata = 7;
+    uint64 disk_size = 8;
+    string network = 9;
+    enum OSType {
+      UNKNOWN = 0;
+      LINUX = 1;
+      WINDOWS = 2;
+    }
+    OSType os_type = 10;
+    string api_project = 11;
+  }
+}
+
+/**
+ * Create Image response.
+ */
+message CreateImageResponse {
+  string status = 1;
+  string request_id = 2;
+}
+
+/**
+ * Create Template request.
+ *
+ * Example transcoded payload:
+ * {
+ *   "template": {
+ *     "project": "orchestrate-test-1",
+ *     "zone": "us-central1-a",
+ *     "name": "vfx",
+ *     "image_family": "orchestrate-test-1-centos-7-visual-core",
+ *     "image_project": "orchestrate-test-1",
+ *     "network": "default",
+ *     "static_ip": true,
+ *     "scopes": [
+ *       "default",
+ *       "https://www.googleapis.com/auth/compute.readonly",
+ *     ],
+ *     "instance_name_pattern": "{type}-{region}-{gpu_count}x{gpu_type}-{user}",
+ *     "sizes": [
+ *       {
+ *         "name": "small",
+ *         "memory": 8,
+ *         "cpus": 6,
+ *         "gpu_type": "t4-vws",
+ *         "gpu_count": 1",
+ *         "disk_size": 100
+ *       },
+ *       {
+ *         "name": "medium",
+ *         "memory": 16,
+ *         "cpus": 12,
+ *         "gpu_type": "t4-vws",
+ *         "gpu_count": 1",
+ *         "disk_size": 200
+ *       },
+ *       {
+ *         "name": "large",
+ *         "memory": 32,
+ *         "cpus": 24,
+ *         "gpu_type": "t4-vws",
+ *         "gpu_count": 2",
+ *         "disk_size": 200
+ *       }
+ *     ],
+ *     "metadata": [
+ *     ]
+ *   }
+ * }
+ */
+message CreateTemplateRequest {
+  Template template = 1;
+
+  message Template {
+    string project = 1;
+    string zone = 2;
+    string name = 3;
+    string image_family = 4;
+    string image_project = 5;
+    string network = 6;
+    bool static_ip = 7;
+    repeated string scopes = 8;
+    string instance_name_pattern = 9;
+    repeated Size sizes = 10;
+    string default_size_name = 11;
+    repeated Metadata metadata = 12;
+
+    message Size {
+      string name = 1;
+      uint64 memory = 2;
+      uint64 cpus = 3;
+      string gpu_type = 4;
+      uint64 gpu_count = 5;
+      uint64 disk_size = 6;
+    }
+  }
+}
+
+/**
+ * Create Template response.
+ */
+message CreateTemplateResponse {
+  string status = 1;
+  string request_id = 2;
+}
+
+/**
+ * Delete Template request.
+ *
+ * Example transcoded payload:
+ * {
+ *   "project": "orchestrate-test-1",
+ *   "name": "vfx",
+ * }
+ */
+message DeleteTemplateRequest {
+  string project = 1;
+  string name = 2;
+}
+
+/**
+ * Delete Template response.
+ */
+message DeleteTemplateResponse {
+  string status = 1;
+  string request_id = 2;
+}
+
+/**
+ * Create Instance request.
+ *
+ * Example transcoded payload:
+ * {
+ *   "instance": {
+ *     "project": "orchestrate-test-1",
+ *     "zone": "us-central1-a",
+ *     "template": "vfx",
+ *     "size": "large",
+ *     "name": "vfx-render-1",
+ *   }
+ * }
+ */
+message CreateInstanceRequest {
+  Instance instance = 1;
+
+  message Instance {
+    string project = 1;
+    string zone = 2;
+    string template = 3;
+    string size = 4;
+    string name = 5;
+    repeated Metadata metadata = 6;
+    bool use_latest_image = 7;
+  }
+}
+
+/**
+ * Create Instance response.
+ */
+message CreateInstanceResponse {
+  string status = 1;
+  string request_id = 2;
+  string name = 3;
+}
+
+/**
+ * Register Project request.
+ */
+message RegisterProjectRequest {
+  string project = 1;
+}
+
+/**
+ * Register Project response.
+ */
+message RegisterProjectResponse {
+  string status = 1;
+  string request_id = 2;
+}
+
+/**
+ * Deregister Project request.
+ */
+message DeregisterProjectRequest {
+  string project = 1;
+}
+
+/**
+ * Deregister Project response.
+ */
+message DeregisterProjectResponse {
+  string status = 1;
+  string request_id = 2;
+}

@@ -1,0 +1,26 @@
+REM Copyright 2020 Google LLC
+REM
+REM Licensed under the Apache License, Version 2.0 (the "License");
+REM you may not use this file except in compliance with the License.
+REM You may obtain a copy of the License at
+REM
+REM     https://www.apache.org/licenses/LICENSE-2.0
+REM
+REM Unless required by applicable law or agreed to in writing, software
+REM distributed under the License is distributed on an "AS IS" BASIS,
+REM WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+REM See the License for the specific language governing permissions and
+REM limitations under the License.
+
+REM This file automatically maps the storage cluster volumes to network drives.
+REM It needs to be in the location where Windows executes batch files upon
+REM user log in. This can be found by executing verbatim:
+REM Windows Menu > Run > shell:common startup
+REM In our Windows Server 2016 it happens to be:
+REM C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp
+REM
+REM Copy to that location and rename to AutomountStartup.bat
+REM You may customize the drive letters used to map the network drives.
+
+net use p: \\storage.resources\projects
+net use t: \\storage.resources\tools
