@@ -91,8 +91,8 @@ def build_instance_payload(instance):
     instance: Creation parameters.
   """
   template = get_template(instance)
-  instance_metadata, orchestrate_metadata = get_metadata(instance, template)
-  name = build_name(instance, orchestrate_metadata)
+  metadata = Metadata.parse(instance, template)
+  name = build_name(instance, metadata.orchestrate)
 
   region = '-'.join(instance.zone.split('-')[:2])
   region_url = 'projects/{project}/regions/{region}'.format(
@@ -141,7 +141,7 @@ def build_instance_payload(instance):
   # this value and override the machineType from this template.
   payload['machineType'] = '{zone_url}/machineTypes/{machine_type}'.format(
       zone_url=zone_url,
-      machine_type=orchestrate_metadata.get('machine_type', 'n1-standard-8'),
+      machine_type=metadata.orchestrate.get('machine_type', 'n1-standard-8'),
       )
 
   # acceleratorType
@@ -166,7 +166,7 @@ def build_instance_payload(instance):
 
   # subnetwork
   for interface in payload['networkInterfaces']:
-    network = orchestrate_metadata.get('network', 'default')
+    network = metadata.orchestrate.get('network', 'default')
     interface['network'] = 'global/networks/{network}'.format(network=network)
     interface['subnetwork'] = '{region_url}/subnetworks/{subnetwork}'.format(
         region_url=region_url,
@@ -176,10 +176,10 @@ def build_instance_payload(instance):
       del interface['accessConfigs']
 
   set_startup_script(
-      instance_metadata,
+      metadata,
       boot_image_latest if instance.use_latest_image else boot_image
       )
-  payload['metadata'] = dict(items=instance_metadata)
+  payload['metadata'] = dict(items=metadata.instance_payload)
 
   return payload
 
@@ -315,48 +315,58 @@ def build_name(instance, orchestrate_metadata):
   return name
 
 
-def get_metadata(instance, template):
-  """Split metadata stored in template in instance and orchestrate dictionaries.
+class Metadata:
+  """Contain instance and orchestrate-specific metadata.
 
   The instanceTemplate representing the Orchestrate template and size stores two
   kinds of metadata in the same list: One set intended for the instance itself,
-  and the other for Orchestrate-specific attributes that extend those stored in the
-  instanceTemplate itself. The latter are prefixed with "orchestrate_". This method
-  splits the metadata into two groups:
+  and the other for Orchestrate-specific attributes that extend those stored in
+  the instanceTemplate itself. The latter are prefixed with "orchestrate_".
+  This method splits the metadata into three groups for convenience:
 
-  1. Instance metadata: A list of key,value dictionaries compatible with the
-     instances.insert and instanceTemplates.insert API methods.
-  2. Orchestrate metadata: A Python dictionary for easier access. The orchestrate_
-     prefix is stripped from key name.
-
-  Args:
-    instance: Instance creation parameters.
-    template: An instanceTemplate object representing the Orchestrate template and
-      size requested for the instance.
-
-  Returns:
-    A tuple with two dictionaries with the instance and orchestrate-specific
-    metadata.
-    The instance metadata is in this format [dict(key=..., value=...),...]
-    The orchestrate metadata is a Python dictionary.
+  - instance: Metadata intended to propagate down to the instance upon creation.
+  - instance_payload: Same as "instance" but in a format suitable for the API,
+    i.e.: [dict(key=..., value=...),...]
+  - Metadata intended for Orchestrate itself. This normally includes machine
+    type, and other parameters that do not currently exist in the standard
+    instanceTemplate entity.
   """
-  instance_metadata = []
-  orchestrate_metadata = dict()
 
-  # Order matters.
-  # 1. Get metadata from template.
-  for item in template['properties']['metadata']['items']:
-    if item['key'].startswith('orchestrate_'):
-      key = item['key'].replace('orchestrate_', '')
-      orchestrate_metadata[key] = item['value']
-    else:
-      instance_metadata.append(item)
+  def __init__(self):
+    self.instance = dict()
+    self.instance_payload = []
+    self.orchestrate = dict()
 
-  # 2. Override with metadata explicitly provided upon instance creation.
-  for item in instance.metadata:
-    instance_metadata.append(dict(key=item.key, value=item.value))
+  @staticmethod
+  def parse(instance, template):
+    """Split metadata stored in template into instance and orchestrate groups.
 
-  return instance_metadata, orchestrate_metadata
+    Args:
+      instance: Instance creation parameters.
+      template: An instanceTemplate object representing the Orchestrate template
+        and size requested for the instance.
+
+    Returns:
+      An instance of Metadata.
+    """
+    metadata = Metadata()
+
+    # Order matters.
+    # 1. Get metadata from template.
+    for item in template['properties']['metadata']['items']:
+      if item['key'].startswith('orchestrate_'):
+        key = item['key'].replace('orchestrate_', '')
+        metadata.orchestrate[key] = item['value']
+      else:
+        metadata.instance[item['key']] = item['value']
+        metadata.instance_payload.append(item)
+
+    # 2. Override with metadata explicitly provided upon instance creation.
+    for item in instance.metadata:
+      metadata.instance[item.key] = item.value
+      metadata.instance_payload.append(dict(key=item.key, value=item.value))
+
+    return metadata
 
 
 def set_startup_script(metadata, image):
@@ -366,32 +376,29 @@ def set_startup_script(metadata, image):
   one for Windows depending on the image base OS (see get_os_type)
 
   Args:
-    metadata: Instance metadata
+    metadata: Parsed metadata
     image: Image.
 
   Raises:
-    OrchestrateInstanceCreationError: if cannot determine the type of OS from the
-      given image.
+    OrchestrateInstanceCreationError: if cannot determine the type of OS from
+      the given image.
   """
-  # TODO(b/126764704) This currently precludes clients from running their own
-  # startup script. Need to find out a better/alternate way of doing this.
-  # For our current purpose and use case this would suffice.
   os_type = get_os_type(image)
 
-  if os_type == 'linux':
-    script = 'gs://{bucket}/remotedesktopconfigure.py'.format(
-        bucket=environ.ORCHESTRATE_BUCKET)
-    metadata.append(dict(
-        key='startup-script-url',
-        value=script,
-        ))
-  elif os_type == 'windows':
-    script = 'gs://{bucket}/remotedesktopconfigure.ps1'.format(
-        bucket=environ.ORCHESTRATE_BUCKET)
-    metadata.append(dict(
-        key='windows-startup-script-url',
-        value=script,
-        ))
+  if os_type == 'windows':
+    key = 'windows-startup-script-url'
+    extension = 'ps1'
+  else:
+    key = 'startup-script-url'
+    extension = 'py'
+
+  if key not in metadata.instance:
+    script = 'gs://{bucket}/remotedesktopconfigure.{extension}'.format(
+        bucket=environ.ORCHESTRATE_BUCKET,
+        extension=extension,
+        )
+    metadata.instance[key] = script
+    metadata.instance_payload.append(dict(key=key, value=script))
 
 
 def get_os_type(image):
@@ -436,10 +443,11 @@ def get_os_type(image):
 
   # 3. Cannot determine OS
   message = (
-      'Image {image} does not have a orchestrate_os label. And, could not guess the'
-      ' OS from the family name based on GCP image family naming conventions,'
-      ' e.g. windows-, centos-, etc. Please add a orchestrate_os label and set it'
-      ' to either "linux" or "windows" to indicate the base OS for this image.'
-      ' Or, rename the image family to include a prefix with the base OS name.'
+      'Image {image} does not have a orchestrate_os label. And, could not guess'
+      ' the OS from the family name based on GCP image family naming'
+      ' conventions, e.g. windows-, centos-, etc. Please add a orchestrate_os'
+      ' label and set it to either "linux" or "windows" to indicate the base OS'
+      ' for this image. Or, rename the image family to include a prefix with'
+      ' the base OS name.'
       ).format(image=image['selfLink'])
   raise OrchestrateInstanceCreationError(message)
