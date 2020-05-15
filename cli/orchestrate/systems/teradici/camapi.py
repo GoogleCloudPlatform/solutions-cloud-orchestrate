@@ -16,7 +16,9 @@
 
 """Simple interface to Teradici CAM's REST API v1."""
 
+import json
 import requests
+import os
 
 
 class Namespace:
@@ -42,17 +44,24 @@ class CloudAccessManager(Namespace):
     - machines.entitlements.post -> POST machines/entitlements'
   """
 
-  def __init__(self, api_token):
-    super().__init__()
+  def __init__(self, api_token=None, credentials_file_name=None):
+    """Initializes API with given token or credentials.
 
-    # configuration for endpoint requests
-    Namespace.headers = dict(
-        Authorization=api_token,
-        )
+    If api_token is provided, it uses it directly in all requests. If a
+    credentials_file_name is provided, it attempts to sign in to the CAM API
+    with them to generate an API token that then gets used in all requests.
+
+    Args:
+      api_token: CAM organization level API token.
+      credentials_file_name: JSON file containing the credentials of a CAM
+        service account.
+    """
+    super().__init__()
 
     self.endpoints = dict(
         deployments=Deployments(),
         auth=Namespace(
+            signin=AuthSignin(),
             tokens=Namespace(
                 connector=AuthTokensConnector()
                 )
@@ -63,6 +72,13 @@ class CloudAccessManager(Namespace):
                 adcomputers=MachinesEntitlementsADComputers(),
                 )
             ),
+        )
+
+    if not api_token:
+      api_token = self.auth.signin.post(credentials_file_name)
+
+    Namespace.headers = dict(
+        Authorization=api_token,
         )
 
 
@@ -103,6 +119,36 @@ class Deployments(Namespace):
     payload = response.json()
     deployment = payload['data']
     return deployment
+
+
+class AuthSignin(Namespace):
+  """auth/signin endpoints."""
+  url = '{}/auth/signin'.format(Namespace.url)
+
+  def post(self, credentials_file_name):
+    """Returns a API token for the given service account.
+
+    Args:
+      credentials_file_name: JSON file with the credentials of a CAM service
+        account.
+
+    Returns:
+      An API token.
+    """
+    file_name = os.path.abspath(os.path.expanduser(credentials_file_name))
+    with open(file_name, 'r') as input_file:
+      credentials = json.load(input_file)
+
+    payload = dict(
+        username=credentials.get('username'),
+        password=credentials.get('apiKey'),
+        tenantId=credentials.get('tenantId'),
+        )
+    response = requests.post(self.url, data=payload)
+    response.raise_for_status()
+    payload = response.json()
+    token = payload['data']['token']
+    return token
 
 
 class AuthTokensConnector(Namespace):
