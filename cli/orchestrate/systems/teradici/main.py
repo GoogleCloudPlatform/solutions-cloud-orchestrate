@@ -26,13 +26,18 @@ from orchestrate import base
 log = logging.getLogger(__name__)
 
 
+class InvalidConfigurationError(Exception):
+  """Indicate errors with provided parameters."""
+  pass
+
+
 class CloudAccessSoftware(base.OrchestrateSystem):
   """Deploy Teradici CAS."""
 
   def __init__(self):
     super(CloudAccessSoftware, self).__init__()
     # Active Directory
-    self.domain = 'demo'
+    self.domain = 'cloud.demo'
     self.users_file = ''
 
     # CAM
@@ -136,6 +141,14 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
         self.windows_accelerator_type = 'nvidia-tesla-p4-vws'
       else:
         self.windows_accelerator_type = 'nvidia-tesla-t4-vws'
+
+    if not self.domain or len(self.domain.split('.')) < 2:
+      message = (
+          'The AD domain {domain} is not valid. Please provide one that is'
+          ' composed of at least two parts separated by a dot, e.g. cloud.demo'
+          ).format(domain=self.domain)
+      raise InvalidConfigurationError(message)
+
 
   def create_connector_token(self):
     """Create a CAM connector token for the deployment."""
