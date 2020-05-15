@@ -172,6 +172,8 @@ def build_instance_payload(instance):
         region_url=region_url,
         subnetwork=network,
         )
+    if not instance.use_external_ip and 'accessConfigs' in interface:
+      del interface['accessConfigs']
 
   set_startup_script(
       instance_metadata,
