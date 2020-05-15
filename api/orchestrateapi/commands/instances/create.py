@@ -347,7 +347,7 @@ def get_metadata(instance, template):
   # 1. Get metadata from template.
   for item in template['properties']['metadata']['items']:
     if item['key'].startswith('orchestrate_'):
-      key = item['key'][8:]
+      key = item['key'].replace('orchestrate_', '')
       orchestrate_metadata[key] = item['value']
     else:
       instance_metadata.append(item)
