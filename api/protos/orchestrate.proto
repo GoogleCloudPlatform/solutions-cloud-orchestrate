@@ -302,6 +302,7 @@ message CreateInstanceRequest {
     string name = 5;
     repeated Metadata metadata = 6;
     bool use_latest_image = 7;
+    bool use_external_ip = 8;
   }
 }
 

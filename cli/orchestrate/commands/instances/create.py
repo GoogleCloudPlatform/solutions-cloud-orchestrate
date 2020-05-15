@@ -58,6 +58,7 @@ Examples:
     return dict(
         size=None,
         name=None,
+        use_external_ip=False,
         )
 
   @property
@@ -81,6 +82,9 @@ Examples:
                 'Use the image version at the time the template was created'
                 ' instead of the latest version in the image family. It will'
                 ' use the latest image by default unless this is specified.')),
+        optparse.Option(
+            '--external-ip', dest='use_external_ip', action='store_true',
+            help=('Use an external IP address')),
         ]
     return options
 
@@ -119,6 +123,7 @@ Examples:
             name=options.name,
             metadata=metadata,
             use_latest_image=options.use_latest_image,
+            use_external_ip=options.use_external_ip,
         )
     )
 
