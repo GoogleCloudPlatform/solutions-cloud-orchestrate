@@ -19,7 +19,7 @@ Usage: orchestrate broker machines unassign <DEPLOYMENT> <MACHINE>
 """
 
 import logging
-import os
+import optparse
 
 from orchestrate import base
 from orchestrate.systems.teradici import camapi
@@ -39,6 +39,23 @@ Unassign all users from a given macines in connection broker.
 Usage: orchestrate broker machines unassign <DEPLOYMENT> <MACHINE1> [ <MACHINE2>[ ...]]
 """.lstrip()
 
+  @property
+  def defaults(self):
+    """Returns default option values."""
+    return dict(
+        deployment=None,
+        )
+
+  @property
+  def options(self):
+    """Returns command parser options."""
+    options = [
+        optparse.Option('--deployment', help=(
+            'Deployment name. Uses project name by default if not explicitly'
+            ' provided')),
+        ]
+    return options
+
   def run(self, options, arguments):
     """Executes command.
 
@@ -52,18 +69,20 @@ Usage: orchestrate broker machines unassign <DEPLOYMENT> <MACHINE1> [ <MACHINE2>
     log.debug('broker machines unassign %(options)s %(arguments)s', dict(
         options=options, arguments=arguments))
 
-    if len(arguments) < 2:
-      log.error('Expected deployment and at least one machine name.')
+    if len(arguments) < 1:
+      log.error('Expected at least one machine name.')
       return False
 
-    deployment_name = arguments[0]
     machine_names = arguments[1:]
-    self.unassign(deployment_name, machine_names)
+    deployment_name = options.deployment or options.project
 
-  def unassign(self, deployment_name, machine_names):
+    self.unassign(options.project, deployment_name, machine_names)
+
+  def unassign(self, project, deployment_name, machine_names):
     """Unassign all users from given machines.
 
     Args:
+      project: GCP project.
       deployment_name: Deployment.
       machine_names: Machine names.
 
@@ -71,7 +90,8 @@ Usage: orchestrate broker machines unassign <DEPLOYMENT> <MACHINE1> [ <MACHINE2>
       True if it succeeded. False otherwise.
     """
     log.debug('Locating deployment: %s', deployment_name)
-    cam = camapi.CloudAccessManager(os.environ['TERADICI_TOKEN'])
+    cam = camapi.CloudAccessManager(project=project,
+                                    deployment=deployment_name)
     deployment = cam.deployments.get(deployment_name)
 
     # Get machine ids

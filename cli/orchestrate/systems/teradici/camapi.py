@@ -17,8 +17,12 @@
 """Simple interface to Teradici CAM's REST API v1."""
 
 import json
-import requests
+import logging
 import os
+import requests
+
+
+log = logging.getLogger(__name__)
 
 
 class Namespace:
@@ -44,17 +48,31 @@ class CloudAccessManager(Namespace):
     - machines.entitlements.post -> POST machines/entitlements'
   """
 
-  def __init__(self, api_token=None, credentials_file_name=None):
+  def __init__(self, api_token=None, project=None, deployment=None,
+               credentials_file_name=None):
     """Initializes API with given token or credentials.
 
-    If api_token is provided, it uses it directly in all requests. If a
-    credentials_file_name is provided, it attempts to sign in to the CAM API
-    with them to generate an API token that then gets used in all requests.
+    Attempt to connect to the backend in the following order:
+    1. Use api_token if provided.
+    2. Locate the service account credentials using the project and deployment
+       names in the following pattern:
+       ~/.config/teradici/{project}-{deployment}.json
+    3. Locate the service account credentials from credentials_file_name.
+
+    Note that api_token, project & deployment, and credentials_file_name are
+    mutually exclusive. If all are provided, they are attempted in the order
+    above and stop when the first connection method succeeds.
 
     Args:
       api_token: CAM organization level API token.
+      project: GCP project name.
+      deployment: CAM deployment name.
       credentials_file_name: JSON file containing the credentials of a CAM
         service account.
+
+    Raises:
+      RuntimeError: if unable to get a valid API token with any of the given
+        parameters.
     """
     super().__init__()
 
@@ -74,8 +92,33 @@ class CloudAccessManager(Namespace):
             ),
         )
 
+    if not api_token and project and deployment:
+      log.debug('Locating CAM service account credentials using project %s'
+                ' and deployment %s names', project, deployment)
+      file_name = '~/.config/teradici/{project}-{deployment}.json'.format(
+          project=project,
+          deployment=deployment,
+          )
+      try:
+        api_token = self.auth.signin.post(file_name)
+      except FileNotFoundError:
+        log.error('Could not locate CAM service account credentials file at %s',
+                  file_name)
+
+    if not api_token and credentials_file_name:
+      try:
+        api_token = self.auth.signin.post(credentials_file_name)
+      except FileNotFoundError:
+        log.error('Could not locate CAM service account credentials file at %s',
+                  credentials_file_name)
+
     if not api_token:
-      api_token = self.auth.signin.post(credentials_file_name)
+      message = (
+          'Unable to get a valid CAM API token. You may provide an API token,'
+          ' project & deployment names, or the file name of a CAM service'
+          ' account credentials.'
+          )
+      raise RuntimeError(message)
 
     Namespace.headers = dict(
         Authorization=api_token,

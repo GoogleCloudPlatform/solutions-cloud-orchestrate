@@ -45,15 +45,19 @@ Usage: orchestrate broker machines list [OPTIONS] <DEPLOYMENT>
     """Returns default option values."""
     return dict(
         assigned=False,
+        deployment=None,
         )
 
   @property
   def options(self):
     """Returns command parser options."""
     options = [
-        optparse.Option('-a', '--assigned', action='store_true', help=(
+        optparse.Option('--assigned', action='store_true', help=(
             'Show only machines that are assigned to users.'
             ' Default is %default')),
+        optparse.Option('--deployment', help=(
+            'Deployment name. Uses project name by default if not explicitly'
+            ' provided')),
         ]
     return options
 
@@ -70,13 +74,14 @@ Usage: orchestrate broker machines list [OPTIONS] <DEPLOYMENT>
     log.debug('broker machines list %(options)s %(arguments)s', dict(
         options=options, arguments=arguments))
 
-    if len(arguments) != 1:
-      log.error('Expected deployment name.')
+    if arguments:
+      log.error('Unexpected arguments. See --help for more information.')
       return False
 
-    deployment_name = arguments[0]
+    deployment_name = options.deployment or options.project
 
-    cam = camapi.CloudAccessManager(os.environ['TERADICI_TOKEN'])
+    cam = camapi.CloudAccessManager(project=options.project,
+                                    deployment=deployment_name)
     deployment = cam.deployments.get(deployment_name)
 
     if options.assigned:
