@@ -244,6 +244,39 @@ class Machines(Namespace):
     machines = payload.get('data', [])
     return machines
 
+  def post(self, deployment, name, project, zone):
+    """Creates a machine that can be assigned to users.
+
+    Args:
+      deployment: CAM deployment object.
+      name: Machine name.
+      project: GCP project name.
+      zone: GCP zone.
+
+    Returns:
+      A dictionary with the CAM machine details.
+    """
+    payload = dict(
+        provider='gcp',
+        machineName=name,
+        deploymentId=deployment['deploymentId'],
+        projectId=project,
+        zone=zone,
+        active=True,
+        managed=True,
+    )
+
+    response = requests.post(
+        self.url,
+        headers=self.headers,
+        data=payload,
+    )
+    response.raise_for_status()
+
+    payload = response.json()
+    machine = payload['data']
+    return machine
+
 
 class MachinesEntitlements(Namespace):
   """machines/entitlements/ endpoints."""

@@ -78,13 +78,15 @@ Usage: orchestrate broker machines assign <DEPLOYMENT> <MACHINE> <USER1>[ <USER2
     user_names = arguments[1:]
     deployment_name = options.deployment or options.project
 
-    self.assign(options.project, deployment_name, machine_name, user_names)
+    self.assign(options.project, options.zone, deployment_name, machine_name,
+                user_names)
 
-  def assign(self, project, deployment_name, machine_name, user_names):
+  def assign(self, project, zone, deployment_name, machine_name, user_names):
     """Assign machine to list of users.
 
     Args:
       project: GCP project.
+      zone: GCP zone.
       deployment_name: Deployment.
       machine_name: Machine.
       user_names: List of user names. Currently requires full user name.
@@ -108,8 +110,7 @@ Usage: orchestrate broker machines assign <DEPLOYMENT> <MACHINE> <USER1>[ <USER2
           deployment, computerName=machine_name)
       if computers:
         log.debug('Creating machine in CAM: %s', machine_name)
-        computer = computers[0]
-        machine = cam.machines.post(deployment, computer)
+        machine = cam.machines.post(deployment, machine_name, project, zone)
       else:
         message = (
             'Could not locate computer {machine_name}. Check whether it exists'
