@@ -19,7 +19,7 @@ Usage: orchestrate broker machines assign <MACHINE> <USER1>[ <USER2>[ ...]]
 """
 
 import logging
-import os
+import optparse
 import requests.exceptions
 
 from orchestrate import base
@@ -40,6 +40,23 @@ Assign machines to users in connection broker.
 Usage: orchestrate broker machines assign <DEPLOYMENT> <MACHINE> <USER1>[ <USER2>[ ...]]
 """.lstrip()
 
+  @property
+  def defaults(self):
+    """Returns default option values."""
+    return dict(
+        deployment=None,
+        )
+
+  @property
+  def options(self):
+    """Returns command parser options."""
+    options = [
+        optparse.Option('--deployment', help=(
+            'Deployment name. Uses project name by default if not explicitly'
+            ' provided')),
+        ]
+    return options
+
   def run(self, options, arguments):
     """Executes command.
 
@@ -53,19 +70,21 @@ Usage: orchestrate broker machines assign <DEPLOYMENT> <MACHINE> <USER1>[ <USER2
     log.debug('broker machines assign %(options)s %(arguments)s', dict(
         options=options, arguments=arguments))
 
-    if len(arguments) < 3:
-      log.error('Expected deployment, machine, and at least one user name.')
+    if len(arguments) < 2:
+      log.error('Expected machine name and at least one user name.')
       return False
 
-    deployment_name = arguments[0]
-    machine_name = arguments[1]
-    user_names = arguments[2:]
-    self.assign(deployment_name, machine_name, user_names)
+    machine_name = arguments[0]
+    user_names = arguments[1:]
+    deployment_name = options.deployment or options.project
 
-  def assign(self, deployment_name, machine_name, user_names):
+    self.assign(options.project, deployment_name, machine_name, user_names)
+
+  def assign(self, project, deployment_name, machine_name, user_names):
     """Assign machine to list of users.
 
     Args:
+      project: GCP project.
       deployment_name: Deployment.
       machine_name: Machine.
       user_names: List of user names. Currently requires full user name.
@@ -74,7 +93,8 @@ Usage: orchestrate broker machines assign <DEPLOYMENT> <MACHINE> <USER1>[ <USER2
       True if it succeeded. False otherwise.
     """
     log.debug('Locating deployment: %s', deployment_name)
-    cam = camapi.CloudAccessManager(os.environ['TERADICI_TOKEN'])
+    cam = camapi.CloudAccessManager(project=project,
+                                    deployment=deployment_name)
     deployment = cam.deployments.get(deployment_name)
 
     # Get or create machine
