@@ -16,6 +16,7 @@
 """Deploy Teradici Cloud Access Software including broker and security gateway.
 """
 
+import json
 import logging
 import os
 import tempfile
@@ -41,7 +42,6 @@ class CloudAccessSoftware(base.OrchestrateSystem):
     self.users_file = ''
 
     # CAM
-    self.api_token = None
     self.registration_code = None
     self.deployment_name = None
     self.connector_name = None
@@ -55,6 +55,11 @@ class CloudAccessSoftware(base.OrchestrateSystem):
     self.controller_cidr = '10.0.240.0/21'
     self.controller_ip = '10.0.240.2'
     self.connector_cidr = '10.0.248.0/21'
+
+    # Connectors
+    # region:instances:cidr|region:instances:cidr
+    # us-west2-b:1:10.0.0.0/24|us-east4-b:1:10.0.0.0/24
+    self.connectors = 'us-west2-b:1:10.0.232.0/21|us-east4-b:1:10.0.224.0/21'
 
     # Windows workstations
     self.windows_instance_count = 0
@@ -106,7 +111,10 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
 
     self.terraform_version = '0.12.7'
 
+    self.users_file = os.path.expanduser(self.users_file)
+
     if self.deploy_dir:
+      self.deploy_dir = os.path.expanduser(self.deploy_dir)
       command = 'mkdir -p {self.deploy_dir}'.format(self=self)
       self.run_command(command)
     else:
@@ -126,7 +134,7 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
 
     self.terraform_dir = '{self.deploy_dir}/{self.name}'.format(self=self)
     self.terraform_deployment_dir = (
-        '{self.terraform_dir}/deployments/gcp/single-connector'
+        '{self.terraform_dir}/deployments/gcp/multi-region'
         ).format(self=self)
 
     if not self.public_ssh_key_file:
@@ -149,6 +157,19 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
           ).format(domain=self.domain)
       raise InvalidConfigurationError(message)
 
+    self.connector_regions = []
+    self.connector_zones = []
+    self.connector_cidrs = []
+    self.connector_instances = []
+    connectors = self.connectors.split('|')
+    for connector in connectors:
+      parts = connector.split(':')
+      zone, instances, cidr = parts
+      region = '-'.join(zone.split('-')[:-1])
+      self.connector_regions.append(region)
+      self.connector_zones.append(zone)
+      self.connector_cidrs.append(cidr)
+      self.connector_instances.append(instances)
 
   def create_connector_token(self):
     """Create a CAM connector token for the deployment."""
@@ -170,20 +191,19 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
         deployment_name,
         connector_name,
         self.registration_code,
-        self.api_token,
         )
 
   def get_connector_token(self, deployment_name, connector_name,
-                          registration_code, api_token):
+                          registration_code):
     """Returns a valid token for a Teradici CAM connector.
 
     Args:
       deployment_name:
       connector_name:
       registration_code:
-      api_token:
     """
-    cam = camapi.CloudAccessManager(api_token)
+    cam = camapi.CloudAccessManager(project=self.project,
+                                    deployment=deployment_name)
 
     # Get or create Deployment
     deployment = cam.deployments.get(deployment_name)
@@ -255,6 +275,12 @@ ad_service_account_password = "SecuRe_pwd3"
 # License
 pcoip_registration_code  = "{self.registration_code}"
 
+# Connectors
+cac_region_list         = {connector_regions}
+cac_zone_list           = {connector_zones}
+cac_subnet_cidr_list    = {connector_cidrs}
+cac_instance_count_list = {connector_instances}
+
 # Workstations
 win_gfx_instance_count = {self.windows_instance_count}
 win_gfx_instance_name = "{self.windows_instance_name}"
@@ -265,4 +291,12 @@ win_gfx_accelerator_type = "{self.windows_accelerator_type}"
 win_gfx_accelerator_count = {self.windows_accelerator_count}
 
 centos_gfx_instance_count = 0
-""".lstrip().format(self=self)
+""".lstrip().format(
+    self=self,
+    # We need to do this because Terraform only accepts double quotes, and
+    # the Python format function uses single-quotes (as it should)
+    connector_regions=json.dumps(self.connector_regions),
+    connector_zones=json.dumps(self.connector_zones),
+    connector_cidrs=json.dumps(self.connector_cidrs),
+    connector_instances=json.dumps(self.connector_instances),
+    )
