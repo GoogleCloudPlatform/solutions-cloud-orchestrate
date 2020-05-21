@@ -16,6 +16,7 @@
 """Deploy Teradici Cloud Access Software including broker and security gateway.
 """
 
+import json
 import logging
 import os
 import tempfile
@@ -275,10 +276,10 @@ ad_service_account_password = "SecuRe_pwd3"
 pcoip_registration_code  = "{self.registration_code}"
 
 # Connectors
-cac_region_list         = {self.connector_regions}
-cac_zone_list           = {self.connector_zones}
-cac_subnet_cidr_list    = {self.connector_cidrs}
-cac_instance_count_list = {self.connector_instances}
+cac_region_list         = {connector_regions}
+cac_zone_list           = {connector_zones}
+cac_subnet_cidr_list    = {connector_cidrs}
+cac_instance_count_list = {connector_instances}
 
 # Workstations
 win_gfx_instance_count = {self.windows_instance_count}
@@ -290,4 +291,12 @@ win_gfx_accelerator_type = "{self.windows_accelerator_type}"
 win_gfx_accelerator_count = {self.windows_accelerator_count}
 
 centos_gfx_instance_count = 0
-""".lstrip().format(self=self)
+""".lstrip().format(
+    self=self,
+    # We need to do this because Terraform only accepts double quotes, and
+    # the Python format function uses single-quotes (as it should)
+    connector_regions=json.dumps(self.connector_regions),
+    connector_zones=json.dumps(self.connector_zones),
+    connector_cidrs=json.dumps(self.connector_cidrs),
+    connector_instances=json.dumps(self.connector_instances),
+    )
