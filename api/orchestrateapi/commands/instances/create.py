@@ -167,10 +167,11 @@ def build_instance_payload(instance):
   # subnetwork
   for interface in payload['networkInterfaces']:
     network = metadata.orchestrate.get('network', 'default')
+    subnetwork = metadata.orchestrate.get('subnetwork', network)
     interface['network'] = 'global/networks/{network}'.format(network=network)
     interface['subnetwork'] = '{region_url}/subnetworks/{subnetwork}'.format(
         region_url=region_url,
-        subnetwork=network,
+        subnetwork=subnetwork,
         )
     if not instance.use_external_ip and 'accessConfigs' in interface:
       del interface['accessConfigs']

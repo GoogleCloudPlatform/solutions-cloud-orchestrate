@@ -137,6 +137,8 @@ def build_template_payload(template, size):
 
   is_default_size = size.name == template.default_size_name
 
+  subnetwork_name = template.subnetwork or template.network
+
   # Prepare metadata
   metadata = []
   # Metadata intended for the instance itself
@@ -152,6 +154,7 @@ def build_template_payload(template, size):
       dict(key='orchestrate_gpu_type', value=size.gpu_type),
       dict(key='orchestrate_gpu_count', value=size.gpu_count),
       dict(key='orchestrate_network', value=template.network),
+      dict(key='orchestrate_subnetwork', value=subnetwork_name),
   ]
   if template.instance_name_pattern:
     metadata.append(dict(key='orchestrate_instance_name_pattern',
@@ -168,7 +171,7 @@ def build_template_payload(template, size):
       )
   subnetwork = '{region_url}/subnetworks/{subnetwork}'.format(
       region_url=region_url,
-      subnetwork=template.network,
+      subnetwork=subnetwork_name,
       )
 
   guest_accelerators = []

@@ -235,6 +235,7 @@ message CreateTemplateRequest {
     repeated Size sizes = 10;
     string default_size_name = 11;
     repeated Metadata metadata = 12;
+    string subnetwork = 13;
 
     message Size {
       string name = 1;
