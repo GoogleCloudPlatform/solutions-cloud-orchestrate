@@ -157,7 +157,10 @@ functionality on top of GCP:
         optparse.Option('-d', '--metadata', help=(
             'Metadata to override the instance metadata. Same format as gcloud'
             ' compute instances add-metadata.')),
-        optparse.Option('-w', '--network', help='Network to use.'),
+        optparse.Option('-w', '--network', help=(
+            'Network to use. Default is %default')),
+        optparse.Option('--subnetwork', help=(
+            'Subnetwork to use. Default is the same as --network.')),
         ]
     return options
 
@@ -202,6 +205,7 @@ functionality on top of GCP:
             image_family=options.image_family,
             static_ip=options.static_ip,
             network=options.network,
+            subnetwork=options.subnetwork,
             scopes=options.scopes,
             metadata=metadata,
             sizes=sizes,
