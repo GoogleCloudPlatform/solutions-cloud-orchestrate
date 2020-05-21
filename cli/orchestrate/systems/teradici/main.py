@@ -43,6 +43,7 @@ class CloudAccessSoftware(base.OrchestrateSystem):
 
     # CAM
     self.registration_code = None
+    self.deployment_type = 'multi-region'
     self.deployment_name = None
     self.connector_name = None
 
@@ -51,6 +52,7 @@ class CloudAccessSoftware(base.OrchestrateSystem):
 
     # Network
     self.network = 'workstations'
+    self.subnetwork = self.network
     self.workstations_cidr = '10.0.0.0/20'
     self.controller_cidr = '10.0.240.0/21'
     self.controller_ip = '10.0.240.2'
@@ -134,7 +136,7 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
 
     self.terraform_dir = '{self.deploy_dir}/{self.name}'.format(self=self)
     self.terraform_deployment_dir = (
-        '{self.terraform_dir}/deployments/gcp/multi-region'
+        '{self.terraform_dir}/deployments/gcp/{self.deployment_type}'
         ).format(self=self)
 
     if not self.public_ssh_key_file:
@@ -241,7 +243,7 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
   def get_terraform_configuration(self):
     """Returns string with the contents of the tfvars to write."""
     log.info('Configuring Terraform')
-    return """
+    main = """
 # Project
 gcp_credentials_file = "{self.credentials_file}"
 gcp_project_id       = "{self.project}"
@@ -251,13 +253,18 @@ gcp_zone             = "{self.zone}"
 
 # Networking
 vpc_name             = "{self.network}"
-workstations_network = "{self.network}"
+workstations_network = "{self.subnetwork}"
 controller_network   = "controller"
 connector_network    = "connector"
 dc_subnet_cidr       = "{self.controller_cidr}"
 dc_private_ip        = "{self.controller_ip}"
 cac_subnet_cidr      = "{self.connector_cidr}"
 ws_subnet_cidr       = "{self.workstations_cidr}"
+
+# 20200521 Shared-VPC single subnet case
+# Is this the right variable name moving forward?
+# Should this be the same as workstations_network?
+subnet_name          = "{self.subnetwork}"
 
 # Domain
 prefix               = "{self.prefix}"
@@ -275,12 +282,6 @@ ad_service_account_password = "SecuRe_pwd3"
 # License
 pcoip_registration_code  = "{self.registration_code}"
 
-# Connectors
-cac_region_list         = {connector_regions}
-cac_zone_list           = {connector_zones}
-cac_subnet_cidr_list    = {connector_cidrs}
-cac_instance_count_list = {connector_instances}
-
 # Workstations
 win_gfx_instance_count = {self.windows_instance_count}
 win_gfx_instance_name = "{self.windows_instance_name}"
@@ -291,8 +292,17 @@ win_gfx_accelerator_type = "{self.windows_accelerator_type}"
 win_gfx_accelerator_count = {self.windows_accelerator_count}
 
 centos_gfx_instance_count = 0
+""".lstrip().format(self=self)
+
+    connectors = ''
+    if self.connectors:
+      connectors = """
+# Connectors
+cac_region_list         = {connector_regions}
+cac_zone_list           = {connector_zones}
+cac_subnet_cidr_list    = {connector_cidrs}
+cac_instance_count_list = {connector_instances}
 """.lstrip().format(
-    self=self,
     # We need to do this because Terraform only accepts double quotes, and
     # the Python format function uses single-quotes (as it should)
     connector_regions=json.dumps(self.connector_regions),
@@ -300,3 +310,5 @@ centos_gfx_instance_count = 0
     connector_cidrs=json.dumps(self.connector_cidrs),
     connector_instances=json.dumps(self.connector_instances),
     )
+
+    return main + connectors
