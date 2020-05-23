@@ -14,7 +14,7 @@
 # limitations under the License.
 
 bin_dir=$(dirname $(realpath $0))
-cli_dir=$(dirname $bin_dir)
+cli_dir=$(dirname $bin_dir)/src
 service_dir=$cli_dir/orchestrate/service
 api_dir=$(realpath $bin_dir/../../api)
 

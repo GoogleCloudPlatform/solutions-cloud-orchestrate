@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import find_packages
+from setuptools import find_namespace_packages
 from setuptools import setup
 
 
@@ -33,8 +33,9 @@ setup(
     long_description=DESCRIPTION,
     author='Luis Artola',
     author_email='luisartola@google.com',
-    url = 'https://github.com/GoogleCloudPlatform/solutions-cloud-orchestrate',
-    packages=find_packages(),
+    url='https://github.com/GoogleCloudPlatform/solutions-cloud-orchestrate',
+    package_dir={'': 'src'},
+    packages=find_namespace_packages(where='src'),
     entry_points=dict(
         console_scripts=[
             'orchestrate = orchestrate.main:main',
