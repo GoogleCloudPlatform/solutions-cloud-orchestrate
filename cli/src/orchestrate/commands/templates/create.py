@@ -183,6 +183,8 @@ functionality on top of GCP:
 
     name = arguments[0]
 
+    scopes = options.scopes.split(',') if options.scopes else []
+
     metadata = []
     if options.metadata:
       for item in options.metadata.split(','):
@@ -206,7 +208,7 @@ functionality on top of GCP:
             static_ip=options.static_ip,
             network=options.network,
             subnetwork=options.subnetwork,
-            scopes=options.scopes,
+            scopes=scopes,
             metadata=metadata,
             sizes=sizes,
             default_size_name=default_size_name,
