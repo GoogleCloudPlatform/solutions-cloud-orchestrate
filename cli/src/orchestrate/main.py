@@ -23,45 +23,68 @@ import os
 import pkgutil
 import sys
 
+from orchestrate import base
 from orchestrate import utils
 # We need to import this module in order to configure loggers.
 # pylint: disable=unused-import
 import orchestrate.logger
 
+
 log = logging.getLogger(__name__)
 
 
-def execute_command(name, parents, loader, arguments):
-  """Executes the given command.
+class ModuleLoaderError(Exception):
+  """Provide details on why a given module could not be loaded.
+  """
+  pass
+
+
+def create_command(name, loader):
+  """Returns a command instance from the given module loader.
 
   Args:
-    name: Command name, e.g. create.
-    parents: Names of parent commands, e.g. ['orchestrate', 'images']
-    loader: Object that can load the module containing the command.
-    arguments: Arguments relevant to the command.
-  """
-  log.debug('execute %(parents)s %(command)s %(arguments)s', dict(
-      parents=' '.join(parents),
-      command=name,
-      arguments=arguments,
-      ))
-  log.debug('loading module from %s', loader)
+    name: Module name.
+    loader: Module loader.
 
-  # Load module
+  Raises:
+    ModuleLoaderError: If module could not be loaded or does not contain a
+      subclass of OrchestateCommand.
+  """
+  log.debug('loading module %s from %s', name, loader)
   module = loader.find_module(name).load_module(name)
 
-  # Instantiate command
   try:
     command_type = getattr(module, 'Command')
-    if not inspect.isclass(command_type):
+    if not inspect.isclass(command_type) \
+        or not issubclass(command_type, base.OrchestrateCommand):
       raise TypeError()
   except (AttributeError, TypeError):
-    log.error('Could not find implementation of OrchestrateCommand in module %s',
-              module.__file__)
-    return
-  command = command_type()
+    message = (
+        'Could not find implementation of OrchestrateCommand {name} in module'
+        ' {module}'
+        ).format(
+            name=name,
+            module=module.__file__,
+            )
+    raise ModuleLoaderError(message)
 
-  # Parse arguments
+  command = command_type()
+  return command
+
+
+def parse_arguments(command, name, parents, arguments):
+  """Parse command-line and splits it into options and arguments.
+
+  Args:
+    command: OrchestrateCommand instance.
+    name: Module name.
+    parents: Command hierarchy.
+    arguments: Entire command-line arguments.
+
+  Returns:
+    A tuple of options and arguments.
+  """
+  log.debug('Parsing arguments')
   usage = """Usage: {parents} {command} [OPTIONS] [ARGUMENTS]
 
 {description}""".format(
@@ -82,24 +105,30 @@ def execute_command(name, parents, loader, arguments):
   parser.add_options(command.options)
 
   options, arguments = parser.parse_args(arguments)
+  return options, arguments
+
+
+def execute_command(name, parents, loader, arguments):
+  """Executes the given command.
+
+  Args:
+    name: Command name, e.g. create.
+    parents: Names of parent commands, e.g. ['orchestrate', 'images']
+    loader: Object that can load the module containing the command.
+    arguments: Arguments relevant to the command.
+  """
+  log.debug('execute %(parents)s %(command)s %(arguments)s', dict(
+      parents=' '.join(parents),
+      command=name,
+      arguments=arguments,
+      ))
+
+  command = create_command(name, loader)
+  options, arguments = parse_arguments(command, name, parents, arguments)
 
   if options.verbose:
     logging.getLogger().setLevel(logging.DEBUG)
 
-  # Execute command
-  execute_command_with_options(command, options, arguments)
-
-
-def execute_command_with_options(command, options, arguments):
-  """Executes command with parsed options and arguments.
-
-  This method facilitates unit testing patching and introspection.
-
-  Args:
-    command: Command instance to execute.
-    options: Parse options.
-    arguments: Cleaned parsed options.
-  """
   command.run(options, arguments)
 
 

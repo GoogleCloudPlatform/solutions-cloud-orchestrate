@@ -24,71 +24,79 @@ from orchestrate.service.orchestrate_pb2 import DeregisterProjectRequest
 import pytest
 
 
-def run(execute_command_with_options, arguments):
-  """Execute command with correct patches applied to dynamically-loaded module.
+original_create_command = orchestrate.main.create_command
+deregister_Command_remove_configuration = mock.Mock()
+
+
+def create_patched_command(name, loader):
+  """Returns a command instance from the given module loader ready for testing.
+
+  The command subject to unit testing attempts to execute some gcloud commands
+  in addition to the Orchestrate API call. Need to patch it to prevent it from
+  actually executing the commands since we're only interested in knowing that
+  the method was called. Testing the actual execution of these commands is
+  delegated to integration tests and they need proper environment setup and a
+  GCP project in the backend to verify operations.
+
+  Need to decorate the original `orchestrate.main.create_command` function here
+  so that we can intercept the instantiated command and patch the
+  `remove_configuration` method with a `unittest.mock.Mock`. It needs to be done
+  this way because the module is loaded dynamically and the `patch` decorator is
+  not effective given the way `Mock` works. Need to patch where the module is
+  actually loaded.
 
   Args:
-    execute_command_with_options: Mock to extrac options and arguments.
-    arguments: Command-line.
+    name: Module name.
+    loader: Module loader.
   """
-  orchestrate.main.main(arguments)
-  command, options, arguments = execute_command_with_options.call_args[0]
-  command = orchestrate.commands.projects.deregister.Command()
-  command.run(options, arguments)
+  command = original_create_command(name, loader)
+  command.remove_configuration = deregister_Command_remove_configuration
+  return command
 
 
-@mock.patch('orchestrate.commands.projects.deregister.Command.remove_configuration')
 @mock.patch('orchestrate.base.command.OrchestrateCommand.execute')
-@mock.patch('orchestrate.main.execute_command_with_options')
-def test_no_execution(execute_command_with_options, execute, remove_configuration):
+@mock.patch('orchestrate.main.create_command', create_patched_command)
+def test_no_execution(execute):
   """Verify expected behaviour with incomplete options.
 
   Args:
-    execute_command_with_options: Mock to verify calls.
     execute: Mock to verify calls.
-    remove_configuration: Mock to verify calls.
   """
+  deregister_Command_remove_configuration.reset_mock()
+
   # Does not execute API call with unexpected arguments
-  run(execute_command_with_options,
-      ['projects', 'deregister', 'unexpected-arguments'])
-  assert execute_command_with_options.call_count == 1
-  assert remove_configuration.call_count == 0
+  orchestrate.main.main(['projects', 'deregister', 'unexpected-arguments'])
+  assert deregister_Command_remove_configuration.call_count == 0
   assert execute.call_count == 0
 
   # Help text exits program without executing API call
   with pytest.raises(SystemExit):
-    run(execute_command_with_options, ['projects', 'deregister', '--help'])
-  assert execute_command_with_options.call_count == 1
-  assert remove_configuration.call_count == 0
+    orchestrate.main.main(['projects', 'deregister', '--help'])
+  assert deregister_Command_remove_configuration.call_count == 0
   assert execute.call_count == 0
 
   # Incorrect option exits program without executing API call
   with pytest.raises(SystemExit):
-    run(execute_command_with_options,
-        ['projects', 'deregister', '--non-existent-option'])
-  assert execute_command_with_options.call_count == 1
-  assert remove_configuration.call_count == 0
+    orchestrate.main.main(['projects', 'deregister', '--non-existent-option'])
+  assert deregister_Command_remove_configuration.call_count == 0
   assert execute.call_count == 0
 
 
-@mock.patch('orchestrate.commands.projects.deregister.Command.remove_configuration')
 @mock.patch('orchestrate.base.command.OrchestrateCommand.execute')
-@mock.patch('orchestrate.main.execute_command_with_options')
-def test_execution_with_defaults(
-    execute_command_with_options, execute, remove_configuration):
+@mock.patch('orchestrate.main.create_command', create_patched_command)
+def test_execution_with_defaults(execute):
   """Verify translation of CLI options into API call parameters.
 
   Args:
-    execute_command_with_options: Mock to verify calls.
     execute: Mock to verify calls.
-    remove_configuration: Mock to verify calls.
   """
-  run(execute_command_with_options, [
+  deregister_Command_remove_configuration.reset_mock()
+
+  orchestrate.main.main([
       'projects',
       'deregister',
   ])
-  assert execute_command_with_options.call_count == 1
-  assert remove_configuration.call_count == 1
+  assert deregister_Command_remove_configuration.call_count == 1
   assert execute.call_count == 1
 
   # Unpack and verify parameters to the API call
@@ -110,19 +118,17 @@ def test_execution_with_defaults(
   assert options.api_key == 'config_key'
 
 
-@mock.patch('orchestrate.commands.projects.deregister.Command.remove_configuration')
 @mock.patch('orchestrate.base.command.OrchestrateCommand.execute')
-@mock.patch('orchestrate.main.execute_command_with_options')
-def test_execution_with_user_options(
-    execute_command_with_options, execute, remove_configuration):
+@mock.patch('orchestrate.main.create_command', create_patched_command)
+def test_execution_with_user_options(execute):
   """Verify translation of CLI options into API call parameters.
 
   Args:
-    execute_command_with_options: Mock to verify calls.
     execute: Mock to verify calls.
-    remove_configuration: Mock to verify calls.
   """
-  run(execute_command_with_options, [
+  deregister_Command_remove_configuration.reset_mock()
+
+  orchestrate.main.main([
       'projects',
       'deregister',
       '--project=user_project',
@@ -130,8 +136,7 @@ def test_execution_with_user_options(
       '--api-host=user_api_host',
       '--api-key=user_api_key',
   ])
-  assert execute_command_with_options.call_count == 1
-  assert remove_configuration.call_count == 1
+  assert deregister_Command_remove_configuration.call_count == 1
   assert execute.call_count == 1
 
   # Unpack and verify parameters to the API call

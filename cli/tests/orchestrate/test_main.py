@@ -20,6 +20,8 @@ from unittest import mock
 
 import orchestrate.main
 
+import pytest
+
 
 def test_find_valid_commands():
   """Should find valid commands and subcommands at different levels.
@@ -56,23 +58,20 @@ def test_find_valid_commands():
 
 
 @mock.patch('orchestrate.main.suggest_recovery_options')
-@mock.patch('orchestrate.main.execute_command')
-def test_main(execute_command, suggest_recovery_options):
+def test_main(suggest_recovery_options):
   """Verify behaviour when executing commands without actually executing them.
 
   Args:
-    execute_command: Mock to verify calls.
     suggest_recovery_options: Mock to verify calls.
   """
-  orchestrate.main.main(['images', 'create'])
-  assert execute_command.call_count == 1
+  with pytest.raises(SystemExit):
+    orchestrate.main.main(['images', 'create', '--help'])
   assert suggest_recovery_options.call_count == 0
 
-  orchestrate.main.main(['broker', 'machines', 'assign'])
-  assert execute_command.call_count == 2
+  with pytest.raises(SystemExit):
+    orchestrate.main.main(['broker', 'machines', 'assign', '--help'])
   assert suggest_recovery_options.call_count == 0
 
-  orchestrate.main.main(['non-existent-command', 'argument1', 'argument2'])
-  assert execute_command.call_count == 2
+  orchestrate.main.main(
+      ['non-existent-command', 'argument1', 'argument2', '--help'])
   assert suggest_recovery_options.call_count == 1
-
