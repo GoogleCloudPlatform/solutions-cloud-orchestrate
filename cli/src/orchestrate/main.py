@@ -87,6 +87,19 @@ def execute_command(name, parents, loader, arguments):
     logging.getLogger().setLevel(logging.DEBUG)
 
   # Execute command
+  execute_command_with_options(command, options, arguments)
+
+
+def execute_command_with_options(command, options, arguments):
+  """Executes command with parsed options and arguments.
+
+  This method facilitates unit testing patching and introspection.
+
+  Args:
+    command: Command instance to execute.
+    options: Parse options.
+    arguments: Cleaned parsed options.
+  """
   command.run(options, arguments)
 
 
