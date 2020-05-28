@@ -100,17 +100,25 @@ Usage: orchestrate broker machines assign <DEPLOYMENT> <MACHINE> <USER1>[ <USER2
     deployment = cam.deployments.get(deployment_name)
 
     # Get or create machine
-    log.debug('Locating machine in CAM: %s', machine_name)
-    machines = cam.machines.get(deployment, machineName=machine_name)
+    # https://github.com/GoogleCloudPlatform/solutions-cloud-orchestrate/issues/35
+    # Use the right case when locating machines by name, otherwise CAM API
+    # requests will fail with 400 errors. Feels like this should be handled by
+    # CAM itself in the backend. But, for the time being guidelines are:
+    # - CAM machines: lowercase
+    # - AD computers: uppercase
+    cam_machine_name = machine_name.lower()
+    ad_computer_name = machine_name.upper()
+    log.debug('Locating machine in CAM: %s', cam_machine_name)
+    machines = cam.machines.get(deployment, machineName=cam_machine_name)
     if machines:
       machine = machines[0]
     else:
-      log.debug('Locating machine in AD: %s', machine_name)
+      log.debug('Locating machine in AD: %s', ad_computer_name)
       computers = cam.machines.entitlements.adcomputers.get(
-          deployment, computerName=machine_name)
+          deployment, computerName=ad_computer_name)
       if computers:
-        log.debug('Creating machine in CAM: %s', machine_name)
-        machine = cam.machines.post(deployment, machine_name, project, zone)
+        log.debug('Creating machine in CAM: %s', cam_machine_name)
+        machine = cam.machines.post(deployment, cam_machine_name, project, zone)
       else:
         message = (
             'Could not locate computer {machine_name}. Check whether it exists'
