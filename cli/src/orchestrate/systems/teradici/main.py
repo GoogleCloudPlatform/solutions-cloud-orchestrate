@@ -163,15 +163,16 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
     self.connector_zones = []
     self.connector_cidrs = []
     self.connector_instances = []
-    connectors = self.connectors.split('|')
-    for connector in connectors:
-      parts = connector.split(':')
-      zone, instances, cidr = parts
-      region = '-'.join(zone.split('-')[:-1])
-      self.connector_regions.append(region)
-      self.connector_zones.append(zone)
-      self.connector_cidrs.append(cidr)
-      self.connector_instances.append(instances)
+    if self.connectors:
+      connectors = self.connectors.split('|')
+      for connector in connectors:
+        parts = connector.split(':')
+        zone, instances, cidr = parts
+        region = '-'.join(zone.split('-')[:-1])
+        self.connector_regions.append(region)
+        self.connector_zones.append(zone)
+        self.connector_cidrs.append(cidr)
+        self.connector_instances.append(instances)
 
   def create_connector_token(self):
     """Create a CAM connector token for the deployment."""
