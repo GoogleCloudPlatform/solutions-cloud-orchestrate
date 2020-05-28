@@ -256,11 +256,6 @@ class Machines(Namespace):
     Returns:
       A dictionary with the CAM machine details.
     """
-    # https://github.com/GoogleCloudPlatform/solutions-cloud-orchestrate/issues/35
-    # Make sure that the machine name is all lower-case, otherwise the CAM API
-    # request will fail with a 400 error. Feels like this should be handled by
-    # CAM itself in the backend.
-    name = name.lower()
     payload = dict(
         provider='gcp',
         machineName=name,
