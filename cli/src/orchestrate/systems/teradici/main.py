@@ -22,6 +22,7 @@ import os
 import tempfile
 from . import camapi
 from orchestrate import base
+import requests
 
 
 log = logging.getLogger(__name__)
@@ -209,9 +210,19 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
                                     deployment=deployment_name)
 
     # Get or create Deployment
-    deployment = cam.deployments.get(deployment_name)
-    if not deployment:
+    try:
       deployment = cam.deployments.post(deployment_name, registration_code)
+    except requests.exceptions.HTTPError as exception:
+      if exception.response.status_code == 409:
+        log.debug('Deployment %s already existed. Reusing.', deployment_name)
+      else:
+        message = (
+            'Unable to create deployment {name} with error code {code}'
+            ).format(
+                name=deployment_name,
+                code=exception.response.code,
+                )
+        raise RuntimeError(message)
 
     # Get an authorization token for the connector that the broker will use
     connector_token = cam.auth.tokens.connector.post(deployment, connector_name)
