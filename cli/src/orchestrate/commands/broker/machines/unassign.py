@@ -73,7 +73,7 @@ Usage: orchestrate broker machines unassign <DEPLOYMENT> <MACHINE1> [ <MACHINE2>
       log.error('Expected at least one machine name.')
       return False
 
-    machine_names = arguments[1:]
+    machine_names = arguments
     deployment_name = options.deployment or options.project
 
     self.unassign(options.project, deployment_name, machine_names)
