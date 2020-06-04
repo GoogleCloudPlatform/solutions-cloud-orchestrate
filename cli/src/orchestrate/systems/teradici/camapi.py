@@ -16,6 +16,7 @@
 
 """Simple interface to Teradici CAM's REST API v1."""
 
+import enum
 import json
 import logging
 import os
@@ -37,6 +38,15 @@ class Namespace:
     return self.endpoints[name]
 
 
+class Scope(enum.Enum):
+  """Scope of endpoints that can be accessed by a given token.
+  """
+  NONE = 1
+  ALL = 2           # Get API token
+  CAM = 3           # CAM Service Account
+  DEPLOYMENT = 4    # Deployment Service Acount
+
+
 class CloudAccessManager(Namespace):
   """Simple interface to Teradici CAM's REST API v1.
 
@@ -48,25 +58,28 @@ class CloudAccessManager(Namespace):
     - machines.entitlements.post -> POST machines/entitlements'
   """
 
-  def __init__(self, api_token=None, project=None, deployment=None,
+  def __init__(self, api_token=None, project=None, scope=Scope.NONE,
                credentials_file_name=None):
     """Initializes API with given token or credentials.
 
     Attempt to connect to the backend in the following order:
     1. Use api_token if provided.
-    2. Locate the service account credentials using the project and deployment
-       names in the following pattern:
-       ~/.config/teradici/{project}-{deployment}.json
+    2. Locate the service account credentials using the project name and scope
+       in the following pattern:
+       ~/.config/teradici/{project}-{scope}.json
     3. Locate the service account credentials from credentials_file_name.
 
-    Note that api_token, project & deployment, and credentials_file_name are
+    Note that api_token, project & scope, and credentials_file_name are
     mutually exclusive. If all are provided, they are attempted in the order
     above and stop when the first connection method succeeds.
 
     Args:
       api_token: CAM organization level API token.
       project: GCP project name.
-      deployment: CAM deployment name.
+      scope: Intended use, i.e. "cam", "deployment". This allows for credentials
+        of different types of CAM service accounts. Currently, a "CAM-level"
+        service account can be used to `deploy` the teradici system, whereas the
+        "CAM deployment-level" account can be used to execute `broker` commands.
       credentials_file_name: JSON file containing the credentials of a CAM
         service account.
 
@@ -80,6 +93,7 @@ class CloudAccessManager(Namespace):
         deployments=Deployments(),
         auth=Namespace(
             signin=AuthSignin(),
+            keys=AuthKeys(),
             tokens=Namespace(
                 connector=AuthTokensConnector()
                 )
@@ -92,22 +106,26 @@ class CloudAccessManager(Namespace):
             ),
         )
 
-    if not api_token and project and deployment:
+    if api_token:
+      self.scope = Scope.API
+
+    if not api_token and project and scope:
+      scope_name = scope.name.lower()
       log.debug('Locating CAM service account credentials using project %s'
-                ' and deployment %s names', project, deployment)
-      file_name = '~/.config/teradici/{project}-{deployment}.json'.format(
+                ' and scope %s', project, scope_name)
+      file_name = '~/.config/teradici/{project}-{scope}.json'.format(
           project=project,
-          deployment=deployment,
+          scope=scope_name,
           )
       try:
-        api_token = self.auth.signin.post(file_name)
+        api_token, self.scope = self.auth.signin.post(file_name)
       except FileNotFoundError:
         log.error('Could not locate CAM service account credentials file at %s',
                   file_name)
 
     if not api_token and credentials_file_name:
       try:
-        api_token = self.auth.signin.post(credentials_file_name)
+        api_token, self.scope = self.auth.signin.post(credentials_file_name)
       except FileNotFoundError:
         log.error('Could not locate CAM service account credentials file at %s',
                   credentials_file_name)
@@ -169,14 +187,17 @@ class AuthSignin(Namespace):
   url = '{}/auth/signin'.format(Namespace.url)
 
   def post(self, credentials_file_name):
-    """Returns a API token for the given service account.
+    """Connect with the given credentials to obtain an API token.
+
+    If the 'deploymentId' key is in the credentials read from disk it sets the
+    scope to Scope.DEPLOYMENT. Otherwise, assume that it is a Scope.CAM account.
 
     Args:
       credentials_file_name: JSON file with the credentials of a CAM service
         account.
 
     Returns:
-      An API token.
+      An API token and the detected scope.
     """
     file_name = os.path.abspath(os.path.expanduser(credentials_file_name))
     with open(file_name, 'r') as input_file:
@@ -191,7 +212,32 @@ class AuthSignin(Namespace):
     response.raise_for_status()
     payload = response.json()
     token = payload['data']['token']
-    return token
+    scope = Scope.DEPLOYMENT if 'deploymentId' in credentials else Scope.CAM
+    return token, scope
+
+
+class AuthKeys(Namespace):
+  """auth/keys endpoints."""
+  url = '{}/auth/keys'.format(Namespace.url)
+
+  def post(self, deployment):
+    """Create a deployment-level service account key.
+
+    Args:
+      deployment: CAM deployment object.
+
+    Returns:
+      A dictionary with the credentials. IMPORTANT, these keys should be saved
+      if meant to be persistent. This is the only time they are generated.
+    """
+    payload = dict(
+        deploymentId=deployment['deploymentId'],
+        )
+    response = requests.post(self.url, data=payload)
+    response.raise_for_status()
+    payload = response.json()
+    credentials = payload['data']
+    return credentials
 
 
 class AuthTokensConnector(Namespace):
