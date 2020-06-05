@@ -233,7 +233,7 @@ class AuthKeys(Namespace):
     payload = dict(
         deploymentId=deployment['deploymentId'],
         )
-    response = requests.post(self.url, data=payload)
+    response = requests.post(self.url, data=payload, headers=self.headers)
     response.raise_for_status()
     payload = response.json()
     credentials = payload['data']
