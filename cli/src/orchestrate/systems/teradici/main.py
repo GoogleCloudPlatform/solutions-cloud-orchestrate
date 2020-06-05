@@ -92,15 +92,19 @@ class CloudAccessSoftware(base.OrchestrateSystem):
     log.info('Deploying Teradici CAS')
 
     self.enable_apis()
-    self.create_connector_token()
     self.create_ssh_keys()
 
     roles = """
 roles/editor
+roles/compute.admin
+roles/deploymentmanager.editor
+roles/cloudkms.admin
 roles/cloudkms.cryptoKeyEncrypterDecrypter
 """.strip().split()
     self.create_service_account(roles)
     self.create_service_account_key()
+
+    self.create_connector()
 
     self.install_terraform()
     self.configure_terraform()
@@ -160,6 +164,14 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
           ).format(domain=self.domain)
       raise InvalidConfigurationError(message)
 
+    if not self.deployment_name:
+      if self.prefix:
+        self.deployment_name = '{}-{}'.format(self.project, self.prefix)
+      else:
+        self.deployment_name = self.project
+
+    self.connector_name = self.connector_name or self.prefix or self.zone
+
     self.connector_regions = []
     self.connector_zones = []
     self.connector_cidrs = []
@@ -175,58 +187,103 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
         self.connector_cidrs.append(cidr)
         self.connector_instances.append(instances)
 
-  def create_connector_token(self):
+  def create_connector(self):
     """Create a CAM connector token for the deployment."""
-    log.info('Creating connector token')
-    deployment_name = self.deployment_name
-    if not deployment_name:
-      if self.prefix:
-        deployment_name = '{}-{}'.format(self.project, self.prefix)
-      else:
-        deployment_name = self.project
-    connector_name = self.connector_name or self.prefix or self.zone
-    log.info('deployment: %s', deployment_name)
-    log.info('connector : %s', connector_name)
+    log.info('Creating CAM connector')
+    log.info('deployment: %s', self.deployment_name)
+    log.info('connector : %s', self.connector_name)
     if self.dry_run:
       log.info('DRY-RUN get_connector_token')
       self.connector_token = None
       return
-    self.connector_token = self.get_connector_token(
-        deployment_name,
-        connector_name,
-        self.registration_code,
-        )
+    deployment = self.create_deployment()
+    self.create_deployment_service_account(deployment)
+    self.register_gcp_service_account(deployment)
+    self.create_connector_token(deployment)
 
-  def get_connector_token(self, deployment_name, connector_name,
-                          registration_code):
-    """Returns a valid token for a Teradici CAM connector.
-
-    Args:
-      deployment_name:
-      connector_name:
-      registration_code:
+  def create_deployment(self):
+    """Returns a new CAM deployment.
     """
+    log.info('Creating CAM deployment: %s', self.deployment_name)
     cam = camapi.CloudAccessManager(project=self.project,
-                                    deployment=deployment_name)
-
-    # Get or create Deployment
+                                    scope=camapi.Scope.CAM)
     try:
-      deployment = cam.deployments.post(deployment_name, registration_code)
+      if cam.scope == camapi.Scope.DEPLOYMENT:
+        deployment = cam.deployments.get(self.deployment_name)
+      else:
+        deployment = cam.deployments.post(self.deployment_name,
+                                          self.registration_code)
     except requests.exceptions.HTTPError as exception:
       if exception.response.status_code == 409:
-        log.debug('Deployment %s already existed. Reusing.', deployment_name)
+        message = 'Deployment {name} already existed.'.format(
+            name=self.deployment_name)
       else:
         message = (
             'Unable to create deployment {name} with error code {code}'
             ).format(
-                name=deployment_name,
-                code=exception.response.code,
+                name=self.deployment_name,
+                code=exception.response.status_code,
                 )
-        raise RuntimeError(message)
+      raise RuntimeError(message)
 
-    # Get an authorization token for the connector that the broker will use
-    connector_token = cam.auth.tokens.connector.post(deployment, connector_name)
-    return connector_token
+    return deployment
+
+  def register_gcp_service_account(self, deployment):
+    """Register GCP servcie account in CAM deployment.
+
+    Args:
+      deployment: CAM Deployment object.
+    """
+    log.info('Registering GCP service account in CAM deployment')
+    cam = camapi.CloudAccessManager(project=self.project,
+                                    scope=camapi.Scope.DEPLOYMENT)
+    service_account = cam.deployments.cloudServiceAccounts.post(
+        deployment, self.credentials_file)
+
+
+  def create_deployment_service_account(self, deployment):
+    """Create a CAM deployment-level service account.
+
+    The credentials returned by the CAM are stored in a file with the following
+    pattern: ~/.config/teradici/{project}-{scope}.json
+    Where scope is cam.Scope.DEPLOYMENT
+
+    Args:
+      deployment: CAM Deployment object.
+    """
+    log.info('Creating CAM deployment-level service account')
+    cam = camapi.CloudAccessManager(project=self.project,
+                                    scope=camapi.Scope.CAM)
+    if cam.scope == camapi.Scope.DEPLOYMENT:
+      log.warning(
+          'Credentials are for deployment-level account. Attempting to continue'
+          )
+      return
+
+    credentials = cam.auth.keys.post(deployment)
+
+    log.info('Saving CAM deployment-level service account credentials')
+    file_name = '~/.config/teradici/{project}-{scope}.json'.format(
+        project=self.project,
+        scope=camapi.Scope.DEPLOYMENT.name.lower(),
+        )
+    file_name = os.path.abspath(os.path.expanduser(file_name))
+    directory = os.path.dirname(file_name)
+    os.makedirs(directory, exist_ok=True)
+    with open(file_name, 'w') as output_file:
+      json.dump(credentials, output_file)
+
+  def create_connector_token(self, deployment):
+    """Create a CAM connector token.
+
+    Args:
+      deployment: CAM Deployment object.
+    """
+    log.info('Creating connector token: %s', self.connector_name)
+    cam = camapi.CloudAccessManager(project=self.project,
+                                    scope=camapi.Scope.DEPLOYMENT)
+    self.connector_token = cam.auth.tokens.connector.post(deployment,
+                                                          self.connector_name)
 
   def enable_apis(self):
     """Enable APIs."""
@@ -265,18 +322,13 @@ gcp_zone             = "{self.zone}"
 
 # Networking
 vpc_name             = "{self.network}"
-workstations_network = "{self.subnetwork}"
-controller_network   = "controller"
-connector_network    = "connector"
+ws_subnet_name       = "{self.subnetwork}"
+dc_subnet_name       = "controller"
+cac_subnet_name      = "connector"
 dc_subnet_cidr       = "{self.controller_cidr}"
 dc_private_ip        = "{self.controller_ip}"
 cac_subnet_cidr      = "{self.connector_cidr}"
 ws_subnet_cidr       = "{self.workstations_cidr}"
-
-# 20200521 Shared-VPC single subnet case
-# Is this the right variable name moving forward?
-# Should this be the same as workstations_network?
-subnet_name          = "{self.subnetwork}"
 
 # Domain
 prefix               = "{self.prefix}"

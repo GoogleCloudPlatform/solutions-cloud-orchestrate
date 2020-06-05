@@ -73,7 +73,7 @@ Show list of users visible to the broker.
 
     deployment_name = options.deployment or options.project
     cam = camapi.CloudAccessManager(project=options.project,
-                                    deployment=deployment_name)
+                                    scope=camapi.Scope.DEPLOYMENT)
     deployment = cam.deployments.get(deployment_name)
     users = cam.machines.entitlements.adusers.get(deployment)
 

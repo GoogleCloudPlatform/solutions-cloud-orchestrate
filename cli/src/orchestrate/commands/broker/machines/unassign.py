@@ -91,7 +91,7 @@ Usage: orchestrate broker machines unassign <DEPLOYMENT> <MACHINE1> [ <MACHINE2>
     """
     log.debug('Locating deployment: %s', deployment_name)
     cam = camapi.CloudAccessManager(project=project,
-                                    deployment=deployment_name)
+                                    scope=camapi.Scope.DEPLOYMENT)
     deployment = cam.deployments.get(deployment_name)
 
     # Get machine ids
