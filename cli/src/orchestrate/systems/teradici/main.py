@@ -92,15 +92,19 @@ class CloudAccessSoftware(base.OrchestrateSystem):
     log.info('Deploying Teradici CAS')
 
     self.enable_apis()
-    self.create_connector()
     self.create_ssh_keys()
 
     roles = """
 roles/editor
+roles/compute.admin
+roles/deploymentmanager.editor
+roles/cloudkms.admin
 roles/cloudkms.cryptoKeyEncrypterDecrypter
 """.strip().split()
     self.create_service_account(roles)
     self.create_service_account_key()
+
+    self.create_connector()
 
     self.install_terraform()
     self.configure_terraform()
@@ -194,11 +198,13 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
       return
     deployment = self.create_deployment()
     self.create_deployment_service_account(deployment)
+    self.register_gcp_service_account(deployment)
     self.create_connector_token(deployment)
 
   def create_deployment(self):
     """Returns a new CAM deployment.
     """
+    log.info('Creating CAM deployment: %s', self.deployment_name)
     cam = camapi.CloudAccessManager(project=self.project,
                                     scope=camapi.Scope.CAM)
     try:
@@ -222,6 +228,19 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
 
     return deployment
 
+  def register_gcp_service_account(self, deployment):
+    """Register GCP servcie account in CAM deployment.
+
+    Args:
+      deployment: CAM Deployment object.
+    """
+    log.info('Registering GCP service account in CAM deployment')
+    cam = camapi.CloudAccessManager(project=self.project,
+                                    scope=camapi.Scope.DEPLOYMENT)
+    service_account = cam.deployments.cloudServiceAccounts.post(
+        deployment, self.credentials_file)
+
+
   def create_deployment_service_account(self, deployment):
     """Create a CAM deployment-level service account.
 
@@ -232,6 +251,7 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
     Args:
       deployment: CAM Deployment object.
     """
+    log.info('Creating CAM deployment-level service account')
     cam = camapi.CloudAccessManager(project=self.project,
                                     scope=camapi.Scope.CAM)
     if cam.scope == camapi.Scope.DEPLOYMENT:
@@ -241,13 +261,15 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
       return
 
     credentials = cam.auth.keys.post(deployment)
+
+    log.info('Saving CAM deployment-level service account credentials')
     file_name = '~/.config/teradici/{project}-{scope}.json'.format(
         project=self.project,
         scope=camapi.Scope.DEPLOYMENT.name.lower(),
         )
     file_name = os.path.abspath(os.path.expanduser(file_name))
     directory = os.path.dirname(file_name)
-    os.mkdirs(directory, exist_ok=True)
+    os.makedirs(directory, exist_ok=True)
     with open(file_name, 'w') as output_file:
       json.dump(credentials, output_file)
 
@@ -257,6 +279,7 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
     Args:
       deployment: CAM Deployment object.
     """
+    log.info('Creating connector token: %s', self.connector_name)
     cam = camapi.CloudAccessManager(project=self.project,
                                     scope=camapi.Scope.DEPLOYMENT)
     self.connector_token = cam.auth.tokens.connector.post(deployment,
@@ -299,18 +322,13 @@ gcp_zone             = "{self.zone}"
 
 # Networking
 vpc_name             = "{self.network}"
-workstations_network = "{self.subnetwork}"
-controller_network   = "controller"
-connector_network    = "connector"
+ws_subnet_name       = "{self.subnetwork}"
+dc_subnet_name       = "controller"
+cac_subnet_name      = "connector"
 dc_subnet_cidr       = "{self.controller_cidr}"
 dc_private_ip        = "{self.controller_ip}"
 cac_subnet_cidr      = "{self.connector_cidr}"
 ws_subnet_cidr       = "{self.workstations_cidr}"
-
-# 20200521 Shared-VPC single subnet case
-# Is this the right variable name moving forward?
-# Should this be the same as workstations_network?
-subnet_name          = "{self.subnetwork}"
 
 # Domain
 prefix               = "{self.prefix}"

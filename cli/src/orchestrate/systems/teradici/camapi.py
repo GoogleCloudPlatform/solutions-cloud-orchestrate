@@ -90,7 +90,9 @@ class CloudAccessManager(Namespace):
     super().__init__()
 
     self.endpoints = dict(
-        deployments=Deployments(),
+        deployments=Deployments(
+              cloudServiceAccounts=CloudServiceAccounts(),
+            ),
         auth=Namespace(
             signin=AuthSignin(),
             keys=AuthKeys(),
@@ -180,6 +182,42 @@ class Deployments(Namespace):
     payload = response.json()
     deployment = payload['data']
     return deployment
+
+
+class CloudServiceAccounts(Namespace):
+  """deployments/{deploymentId}/cloudServiceAccounts endpoints."""
+  url = '{}/deployments/{{deployment_id}}/cloudServiceAccounts'.format(
+      Namespace.url)
+
+  def post(self, deployment, credentials_file_name):
+    """Registers a GCP service account in CAM.
+
+    Args:
+      deployment: CAM Deployment object.
+      credentials_file_name: JSON file containing the private key of a GCP
+        service account.
+
+    Returns:
+      A dictionary with minimal information about the service account registered
+      in CAM.
+    """
+    with open(credentials_file_name, 'r') as input_file:
+      credentials = json.load(input_file)
+
+    url = self.url.format(deployment_id=deployment['deploymentId'])
+    payload = dict(
+        provider='gcp',
+        credential=dict(
+            clientEmail=credentials['client_email'],
+            privateKey=credentials['private_key'],
+            projectId=credentials['project_id'],
+        ))
+
+    response = requests.post(url, json=payload, headers=self.headers)
+    response.raise_for_status()
+    payload = response.json()
+    service_account = payload['data']
+    return service_account
 
 
 class AuthSignin(Namespace):
