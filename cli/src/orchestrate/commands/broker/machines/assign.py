@@ -74,6 +74,13 @@ Usage: orchestrate broker machines assign <DEPLOYMENT> <MACHINE> <USER1>[ <USER2
       log.error('Expected machine name and at least one user name.')
       return False
 
+    if not options.zone:
+      log.error(
+          'Please provide --zone explicitly, or set the default zone via'
+          ' gcloud config set-value compute/zone'
+          )
+      return False
+
     machine_name = arguments[0]
     user_names = arguments[1:]
     deployment_name = options.deployment or options.project
