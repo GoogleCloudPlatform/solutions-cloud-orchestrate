@@ -110,8 +110,6 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
     self.configure_terraform()
     self.apply_terraform()
 
-    self.remove_service_account_key()
-
   def configure(self):
     """Configure."""
     self.region = '-'.join(self.zone.split('-')[:-1])
