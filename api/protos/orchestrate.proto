@@ -244,6 +244,7 @@ message CreateTemplateRequest {
       string gpu_type = 4;
       uint64 gpu_count = 5;
       uint64 disk_size = 6;
+      string disk_type = 7;
     }
   }
 }

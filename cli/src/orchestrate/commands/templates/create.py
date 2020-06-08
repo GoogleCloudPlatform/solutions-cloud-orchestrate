@@ -108,6 +108,7 @@ functionality on top of GCP:
         memory=8,
         cpus=2,
         disk_size=200,
+        disk_type='pd-standard',
         gpu_type=None,
         gpu_count=1,
         )
@@ -137,12 +138,14 @@ functionality on top of GCP:
             'A size definition is a comma-separated list of size parameters.'
             ' Separate multiple size definitions with a colon using the'
             ' following format: name=NAME,memory=MEMORY,cpus=CPUS'
-            ',disk_size=DISK_SIZE,gpu_type=GPU_TYPE,gpu_count=GPU_COUNT'
-            '[:name=NAME,memory=...]. This is a convenience method to'
-            ' specify more than one size for a template. If you only need one'
-            ' size, you could either use this option or the individual options'
-            ' --cpus, --memory, --disk-size, --gpu-type and --gpu-count.'
-            ' If both methods are used, the --size option takes precedence')),
+            ',disk_size=DISK_SIZE,disk_type=DISK_TYPE,gpu_type=GPU_TYPE,'
+            'gpu_count=GPU_COUNT[:name=NAME,memory=...]. This is a convenience'
+            ' method to specify more than one size for a template. If you only'
+            ' need one size, you could either use this option or the individual'
+            ' options --cpus, --memory, --disk-size, --gpu-type and'
+            ' --gpu-count. If both methods are used, the --size option takes'
+            ' precedence')),
+        optparse.Option('--disk-type', help='Disk type. Default is %default'),
         optparse.Option('-u', '--default-size-name', help=(
             'Default size name. Applicable only when --size is specified.')),
         optparse.Option('-o', '--scopes', help=(
@@ -250,6 +253,7 @@ functionality on top of GCP:
             gpu_type=size_parameters['gpu_type'],
             gpu_count=int(size_parameters['gpu_count']),
             disk_size=int(size_parameters['disk_size']),
+            disk_type=size_parameters['disk_type'],
             )
         sizes.append(size)
       return sizes
@@ -262,5 +266,6 @@ functionality on top of GCP:
               gpu_type=options.gpu_type,
               gpu_count=int(options.gpu_count),
               disk_size=int(options.disk_size),
+              disk_type=options.disk_type,
               ),
       ]
