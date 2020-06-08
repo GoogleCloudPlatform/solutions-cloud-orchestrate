@@ -19,7 +19,6 @@ orchestrate_dir=$(dirname $api_dir)
 source $orchestrate_dir/environ.sh
 
 cluster=orchestrate
-zone=us-central1-a
 tag=$(date +%Y%m%dt%H%M%S)
 
 echo "Updating Kubernetes cluster for API..."
