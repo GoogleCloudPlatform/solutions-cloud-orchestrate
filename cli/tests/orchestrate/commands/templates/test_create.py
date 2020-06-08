@@ -92,6 +92,7 @@ def test_execution_with_defaults(execute):
   assert request.template.sizes[0].cpus == defaults['cpus']
   assert request.template.sizes[0].memory == defaults['memory']
   assert request.template.sizes[0].disk_size == defaults['disk_size']
+  assert request.template.sizes[0].disk_type == defaults['disk_type']
   assert not request.template.sizes[0].gpu_type
   assert request.template.sizes[0].gpu_count == 1
   assert request.template.default_size_name == defaults['size_name']
@@ -116,6 +117,7 @@ def test_execution_with_one_custom_size(execute):
       '--cpus=11',
       '--memory=12',
       '--disk-size=13',
+      '--disk-type=pd-ssd',
       '--gpu-type=nvidia-tesla-p4-vws',
       '--gpu-count=14',
       '--size-name=user_size',
@@ -154,6 +156,7 @@ def test_execution_with_one_custom_size(execute):
   assert request.template.sizes[0].cpus == 11
   assert request.template.sizes[0].memory == 12
   assert request.template.sizes[0].disk_size == 13
+  assert request.template.sizes[0].disk_type == 'pd-ssd'
   assert request.template.sizes[0].gpu_type == 'nvidia-tesla-p4-vws'
   assert request.template.sizes[0].gpu_count == 14
   assert request.template.default_size_name == 'user_size'

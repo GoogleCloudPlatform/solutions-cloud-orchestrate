@@ -247,7 +247,7 @@ def build_template_payload(template, size):
                   autoDelete=True,
                   initializeParams=dict(
                       sourceImage=source_image,
-                      diskType='pd-standard',
+                      diskType=size.disk_type,
                       diskSizeGb=disk_size,
                   ),
               ),
