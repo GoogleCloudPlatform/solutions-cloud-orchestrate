@@ -207,7 +207,8 @@ class Backend:
       url: Endpoint URL
       **options: Arguments to requests.get
 
-    Returns a mock response object to requests.get calls.
+    Returns:
+      A mock response object to requests.get calls.
     """
     assert url == camapi.Deployments.url
     assert options['headers'] == dict(Authorization=self.token)
@@ -237,7 +238,8 @@ class Backend:
       url: Endpoint URL
       **options: Arguments to requests.post
 
-    Returns a mock response object to requests.post calls.
+    Returns:
+      A mock response object to requests.post calls.
     """
     assert url == camapi.Deployments.url
     assert options['headers'] == dict(Authorization=self.token)
