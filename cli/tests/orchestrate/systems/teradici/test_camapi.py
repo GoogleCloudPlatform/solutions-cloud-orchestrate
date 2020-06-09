@@ -199,6 +199,16 @@ class Backend:
             'deploymentName': 'deployment1',
             'status': 'active'},
         )
+    self.computers = dict(
+        win1={
+            'deploymentId': 'd1',
+            'createdBy': 'u1',
+            'operatingSystem': 'Windows Server 2019 Datacenter',
+            'computerName': 'WIN1',
+            'computerHostname': 'win1.cloud.demo',
+            'operatingSystemVersion': '10.0 (17763)',
+            'createdOn': '2020-06-06T00:11:22.333Z'},
+        )
 
   def deployments_get(self, url, **options):
     """GET deployments/.
@@ -259,6 +269,46 @@ class Backend:
         )
     return response
 
+  def computers_get(self, url, **options):
+    """GET computers/.
+
+    Args:
+      url: Endpoint URL
+      **options: Arguments to requests.get
+
+    Returns:
+      A mock response object to requests.get calls.
+    """
+    assert url == camapi.MachinesEntitlementsADComputers.url
+    assert options['headers'] == dict(Authorization=self.token)
+    if 'computerName' not in options['params']:
+      response = mock.MagicMock()
+      response.status_code = 200
+      response.json.return_value = dict(
+          total=len(self.computers),
+          data=list(self.computers.values()),
+          )
+      return response
+    else:
+      name = options['params']['computerName']
+      try:
+        computer = self.computers[name]
+        response = mock.MagicMock()
+        response.status_code = 200
+        response.json.return_value = dict(
+            total=1,
+            data=[computer],
+            )
+        return response
+      except KeyError:
+        response = mock.MagicMock()
+        response.status_code = 200
+        response.json.return_value = dict(
+            total=0,
+            data=[],
+            )
+        return response
+
 
 def test_deployments():
   """Test deployments endpoints.
@@ -290,3 +340,33 @@ def test_deployments():
     assert deployment['deploymentName'] == 'deployment2'
     assert deployment['registrationCode'] == '222BBB'
     assert deployment['status'] == 'active'
+
+
+def test_computers():
+  """Test computers endpoints.
+  """
+  backend = Backend(token='123abc')
+  cam = camapi.CloudAccessManager(token=backend.token)
+
+  with mock.patch('requests.get', side_effect=backend.deployments_get):
+    deployment = cam.deployments.get('deployment1')
+
+  with mock.patch('requests.get', side_effect=backend.computers_get):
+    computers = cam.machines.entitlements.adcomputers.get(
+        deployment, computerName='win1')
+    assert len(computers) == 1
+    assert computers[0]['deploymentId'] == 'd1'
+    assert computers[0]['computerName'] == 'WIN1'
+
+  with mock.patch('requests.get', side_effect=backend.computers_get):
+    computers = cam.machines.entitlements.adcomputers.get(
+        deployment, computerName='non-existent-computer')
+    assert not computers
+
+  with mock.patch('requests.get', side_effect=backend.computers_get):
+    computers = cam.machines.entitlements.adcomputers.get(deployment)
+    assert len(computers) == 1
+    assert computers[0]['deploymentId'] == 'd1'
+    assert computers[0]['computerName'] == 'WIN1'
+    # assert computers[0]['deploymentId'] == 'd1'
+    # assert computers[0]['computerName'] == 'computer2'
