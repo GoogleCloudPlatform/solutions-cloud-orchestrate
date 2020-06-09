@@ -176,3 +176,115 @@ def test_connection_with_scope_autodetect():
       # which in this test are different on purpose.
       assert cam.scope == camapi.Scope.DEPLOYMENT
       assert cam.headers == dict(Authorization='deployment_token')
+
+
+class Backend:
+  """In-memory test data to feed the Python API implementation via requests.
+  """
+
+  def __init__(self, token):
+    self.token = token
+    self.deployments = dict(
+        deployment1={
+            'deploymentId': 'd1',
+            'resourceGroup': 'rg1',
+            'subscriptionId': 's1',
+            'createdBy': 'u1',
+            'createdOn': '2020-06-06T00:11:22.333Z',
+            'updatedOn': '2020-06-06T00:11:22.333Z',
+            'active': True,
+            'scannedOn': None,
+            'registrationCode': '111AAA',
+            'deploymentURI': '',
+            'deploymentName': 'deployment1',
+            'status': 'active'},
+        )
+
+  def deployments_get(self, url, **options):
+    """GET deployments/.
+
+    Args:
+      url: Endpoint URL
+      **options: Arguments to requests.get
+
+    Returns a mock response object to requests.get calls.
+    """
+    assert url == camapi.Deployments.url
+    assert options['headers'] == dict(Authorization=self.token)
+    name = options['params']['deploymentName']
+    try:
+      deployment = self.deployments[name]
+      response = mock.MagicMock()
+      response.status_code = 200
+      response.json.return_value = dict(
+          total=1,
+          data=[deployment],
+          )
+      return response
+    except KeyError:
+      response = mock.MagicMock()
+      response.status_code = 200
+      response.json.return_value = dict(
+          total=0,
+          data=[],
+          )
+      return response
+
+  def deployments_post(self, url, **options):
+    """POST deployments/.
+
+    Args:
+      url: Endpoint URL
+      **options: Arguments to requests.post
+
+    Returns a mock response object to requests.post calls.
+    """
+    assert url == camapi.Deployments.url
+    assert options['headers'] == dict(Authorization=self.token)
+    name = options['data']['deploymentName']
+    code = options['data']['registrationCode']
+    deployment = dict(
+        deploymentId='d{}'.format(len(self.deployments)+1),
+        deploymentName=name,
+        registrationCode=code,
+        status='active',
+        )
+    self.deployments[name] = deployment
+    response = mock.MagicMock()
+    response.status_code = 201
+    response.json.return_value = dict(
+        data=deployment,
+        )
+    return response
+
+
+def test_deployments():
+  """Test deployments endpoints.
+  """
+  backend = Backend(token='123abc')
+  cam = camapi.CloudAccessManager(token=backend.token)
+
+  with mock.patch('requests.get', side_effect=backend.deployments_get):
+    deployment = cam.deployments.get('deployment1')
+    assert deployment['deploymentId'] == 'd1'
+    assert deployment['deploymentName'] == 'deployment1'
+    assert deployment['registrationCode'] == '111AAA'
+    assert deployment['status'] == 'active'
+
+  with mock.patch('requests.get', side_effect=backend.deployments_get):
+    deployment = cam.deployments.get('non-existent-deployment')
+    assert not deployment
+
+  with mock.patch('requests.post', side_effect=backend.deployments_post):
+    deployment = cam.deployments.post('deployment2', '222BBB')
+    assert deployment['deploymentId'] == 'd2'
+    assert deployment['deploymentName'] == 'deployment2'
+    assert deployment['registrationCode'] == '222BBB'
+    assert deployment['status'] == 'active'
+
+  with mock.patch('requests.get', side_effect=backend.deployments_get):
+    deployment = cam.deployments.get('deployment2')
+    assert deployment['deploymentId'] == 'd2'
+    assert deployment['deploymentName'] == 'deployment2'
+    assert deployment['registrationCode'] == '222BBB'
+    assert deployment['status'] == 'active'
