@@ -19,7 +19,6 @@ from unittest import mock
 
 import orchestrate.commands.projects.deregister
 import orchestrate.main
-from orchestrate.service.orchestrate_pb2 import DeregisterProjectRequest
 
 import pytest
 

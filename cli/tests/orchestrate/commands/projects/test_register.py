@@ -18,7 +18,6 @@
 from unittest import mock
 
 import orchestrate.main
-from orchestrate.service.orchestrate_pb2 import RegisterProjectRequest
 
 import pytest
 
