@@ -145,6 +145,45 @@ class CloudAccessManager(Namespace):
         )
 
 
+class RequestIterator:
+  """Returns a page of results from request supporting offset and limit.
+  """
+
+  def __init__(self, endpoint, *arguments, **options):
+    """Initializes iterator to fetch results in batches.
+
+    Caller to provide `offset` and `limit` in `**options`. If not provided,
+    defaults are used.
+
+    Args:
+      endpoint: Bound method to a camapi.CloudAccessManager method.
+      *arguments: Positional arguments for endpoint.
+      **options: Keyword arguments for endpoint.
+    """
+    self.endpoint = endpoint
+    self.arguments = arguments
+    self.options = dict(options)
+
+  def __iter__(self):
+    offset = self.options.get('offset', 0)
+    limit = self.options.get('limit', 10)
+    while True:
+      self.options['offset'] = offset
+      self.options['limit'] = limit
+      results = self.endpoint(*self.arguments, **self.options)
+      if results:
+        for result in results:
+          yield result
+        offset += limit
+        if len(results) < limit:
+          # This was the last page, no point in sending another request just
+          # to get an empty list.
+          break
+      else:
+        # Last page was full but there are no more results left to fetch.
+        break
+
+
 class Deployments(Namespace):
   """deployments endpoints."""
   url = '{}/deployments'.format(Namespace.url)

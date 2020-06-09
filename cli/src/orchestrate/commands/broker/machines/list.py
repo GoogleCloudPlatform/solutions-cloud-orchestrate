@@ -20,7 +20,6 @@ Usage: orchestrate broker machines list [OPTIONS] <DEPLOYMENT>
 
 import logging
 import optparse
-import os
 
 from orchestrate import base
 from orchestrate.systems.teradici import camapi
@@ -85,46 +84,68 @@ Usage: orchestrate broker machines list [OPTIONS] <DEPLOYMENT>
     deployment = cam.deployments.get(deployment_name)
 
     if options.assigned:
-      self.show_assigned_machines(cam, deployment)
+      entitlements = camapi.RequestIterator(cam.machines.entitlements.get,
+                                            deployment)
+      visitor = EntitlementPrinter()
+      for entitlement in entitlements:
+        visitor.visit(entitlement)
     else:
-      self.show_ad_computers(cam, deployment)
+      computers = camapi.RequestIterator(
+          cam.machines.entitlements.adcomputers.get, deployment)
+      visitor = ADComputerPrinter()
+      for computer in computers:
+        visitor.visit(computer)
 
-  def show_assigned_machines(self, cam, deployment):
-    """Show CAM machines.
 
-    Args:
-      cam: Connection to CloudAccessManager API.
-      deployment: Deployment name.
-    """
-    entitlements = cam.machines.entitlements.get(deployment)
+class EntitlementPrinter:
+  """Print entitlement data in columns.
+  """
 
-    row_format = '{machineName:20} {userGuid:36} {entitlementId}'
-    row = row_format.format(
-        entitlementId='ENTITLEMENT ID', machineName='MACHINE',
-        userGuid='USER GUID')
-    log.info(row)
-    for entitlement in entitlements:
-      row = row_format.format(
-          entitlementId=entitlement['entitlementId'],
-          machineName=entitlement['machine']['machineName'],
-          userGuid=entitlement['userGuid'],
-          )
-      log.info(row)
+  def __init__(self):
+    self.row_format = '{machineName:20} {userGuid:36} {entitlementId}'
+    self.first = True
 
-  def show_ad_computers(self, cam, deployment):
-    """Show AD computers.
+  def visit(self, entitlement):
+    """Print details of given entitlement.
 
     Args:
-      cam: Connection to CloudAccessManager API.
-      deployment: Deployment name.
+      entitlement: Entitlement object.
     """
-    computers = cam.machines.entitlements.adcomputers.get(deployment)
-
-    row_format = '{computerName:15} {operatingSystem} {operatingSystemVersion}'
-    row = row_format.format(
-        computerName='NAME', operatingSystem='OS',
-        operatingSystemVersion='')
-    log.info(row)
-    for computer in computers:
-      row = row_format.format(**computer)
+    if self.first:
+      self.first = False
+      row = self.row_format.format(
+          entitlementId='ENTITLEMENT ID', machineName='MACHINE',
+          userGuid='USER GUID')
       log.info(row)
+    row = self.row_format.format(
+        entitlementId=entitlement['entitlementId'],
+        machineName=entitlement['machine']['machineName'],
+        userGuid=entitlement['userGuid'],
+        )
+    log.info(row)
+
+
+class ADComputerPrinter:
+  """Print computer data in columns.
+  """
+
+  def __init__(self):
+    self.row_format = (
+        '{computerName:15} {operatingSystem} {operatingSystemVersion}'
+        )
+    self.first = True
+
+  def visit(self, computer):
+    """Print details of given computer.
+
+    Args:
+      computer: AD Computer object.
+    """
+    if self.first:
+      self.first = False
+      row = self.row_format.format(
+          computerName='NAME', operatingSystem='OS',
+          operatingSystemVersion='')
+      log.info(row)
+    row = self.row_format.format(**computer)
+    log.info(row)

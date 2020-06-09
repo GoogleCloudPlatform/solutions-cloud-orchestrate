@@ -75,11 +75,32 @@ Show list of users visible to the broker.
     cam = camapi.CloudAccessManager(project=options.project,
                                     scope=camapi.Scope.DEPLOYMENT)
     deployment = cam.deployments.get(deployment_name)
-    users = cam.machines.entitlements.adusers.get(deployment)
-
-    row_format = '{userName:20} {name:30} {userGuid:15}'
-    row = row_format.format(userGuid='GUID', userName='USER', name='NAME')
-    log.info(row)
+    users = camapi.RequestIterator(cam.machines.entitlements.adusers.get,
+                                   deployment)
+    visitor = UserPrinter()
     for user in users:
-      row = row_format.format(**user)
+      visitor.visit(user)
+
+
+class UserPrinter:
+  """Print user data in columns.
+  """
+
+  def __init__(self):
+    self.row_format = '{userName:20} {name:30} {userGuid:15}'
+    self.first = True
+
+  def visit(self, user):
+    """Print details of given user.
+
+    Args:
+      user: AD User object.
+    """
+    if self.first:
+      self.first = False
+      row = self.row_format.format(userGuid='GUID', userName='USER',
+                                   name='NAME')
       log.info(row)
+    row = self.row_format.format(**user)
+    log.info(row)
+
