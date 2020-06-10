@@ -395,6 +395,42 @@ class LocalBackend:
             },
         },
     ]
+    self.machines = [
+        {
+            'machineId': 'm1',
+            'provider': 'gcp',
+            'subscriptionId': 'd1',
+            'machineName': 'computer1',
+            'hostName': 'computer1',
+            'deploymentId': 'd1',
+            'connectorId': '',
+            'resourceGroup': 'us-west2-b',
+            'powerState': 'unknown',
+            'createdBy': 'u0',
+            'createdOn': '2020-06-06T05:31:34.672Z',
+            'updatedOn': '2020-06-06T05:31:34.673Z',
+            'active': True,
+            'location': 'unknown',
+            'vmSize': 'unknown',
+            'osInfo': {
+                'publisher': 'unknown',
+                'offer': 'unknown',
+                'sku': 'unknown',
+                'version': 'unknown',
+            },
+            'provisioningStatus': {
+                'state': 'succeeded',
+                'message': '',
+                'deployment': {},
+                'attributes': {},
+            },
+            'status': 'active',
+            'projectId': 'test',
+            'zone': 'us-west2-b',
+            'powerStateLastChangedOn': '2020-06-06T05:31:34.673Z',
+            'managed': True,
+        },
+    ]
 
   def expect(self, method, url, params=None, data=None, result=None):
     expectation = LocalBackend.Expectation(method, url, params, data, result)
@@ -456,8 +492,8 @@ class LocalBackend:
       options: Request parameters.
 
     Raises:
-      UnexpectedRequestError because the request was not previously expected
-      by calling expect().
+      UnexpectedRequestError: The request was not previously expected by
+        calling expect().
     """
     message = (
         'Unexpected {} {} request during tests. Perhaps adding an Expectation'
@@ -481,6 +517,24 @@ class LocalBackend:
       deployment[key] = options['data'][key]
     self.deployments.append(deployment)
     return dict(data=deployment)
+
+  def machines_post(self, expectation, options):
+    machine = dict(
+        machineId='m{}'.format(len(self.machines)+1),
+        )
+    for key in expectation.data:
+      machine[key] = options['data'][key]
+    self.machines.append(machine)
+    return dict(data=machine)
+
+  def entitlements_post(self, expectation, options):
+    entitlement = dict(
+        entitlementId='e{}'.format(len(self.entitlements)+1),
+        )
+    for key in expectation.data:
+      entitlement[key] = options['data'][key]
+    self.entitlements.append(entitlement)
+    return dict(data=entitlement)
 
   @contextlib.contextmanager
   def activate(self):
@@ -642,6 +696,82 @@ def test_users(local_backend):
     assert users[1]['userName'] == 'user2'
 
 
+def test_machines(local_backend):
+  """Test machines endpoints.
+
+  Args:
+    local_backend: Backend that intercepts requests and returns predictable
+      test data.
+  """
+  with local_backend.activate() as backend:
+    backend.expect(
+        LocalBackend.GET, camapi.Deployments.url,
+        params=dict(deploymentName='deployment1', showactive='true'),
+        result=dict(total=1, data=[backend.deployments[0]]))
+    backend.expect(
+        LocalBackend.GET, camapi.Machines.url,
+        params=dict(deploymentId='d1', machineName='computer1'),
+        result=dict(total=1, data=[backend.machines[0]]))
+    backend.expect(
+        LocalBackend.GET, camapi.Machines.url,
+        params=dict(deploymentId='d1', machineName='non-existent-computer'),
+        result=dict(total=0, data=[]))
+    backend.expect(
+        LocalBackend.POST, camapi.Machines.url,
+        data=[
+            'provider',
+            'machineName',
+            'deploymentId',
+            'projectId',
+            'zone',
+            'active',
+            'managed',
+        ],
+        result=backend.machines_post)
+    backend.expect(
+        LocalBackend.GET, camapi.Machines.url,
+        params=dict(deploymentId='d1'),
+        result=dict(total=2, data=backend.machines))
+
+    cam = camapi.CloudAccessManager(token=backend.token)
+    deployment = cam.deployments.get('deployment1')
+
+    machines = cam.machines.get(deployment, machineName='computer1')
+    assert len(machines) == 1
+    assert machines[0]['deploymentId'] == 'd1'
+    assert machines[0]['machineId'] == 'm1'
+    assert machines[0]['machineName'] == 'computer1'
+    assert machines[0]['projectId'] == 'test'
+    assert machines[0]['zone'] == 'us-west2-b'
+    assert machines[0]['active']
+    assert machines[0]['managed']
+
+    machines = cam.machines.get(
+        deployment, machineName='non-existent-computer')
+    assert not machines
+
+    machine = cam.machines.post(
+        deployment, 'computer2', 'test_project', 'test_zone')
+    assert machine['deploymentId'] == 'd1'
+    assert machine['machineId'] == 'm2'
+    assert machine['machineName'] == 'computer2'
+    assert machine['projectId'] == 'test_project'
+    assert machine['zone'] == 'test_zone'
+
+    machines = cam.machines.get(deployment)
+    assert len(machines) == 2
+    assert machines[0]['deploymentId'] == 'd1'
+    assert machines[0]['machineId'] == 'm1'
+    assert machines[0]['machineName'] == 'computer1'
+    assert machines[0]['projectId'] == 'test'
+    assert machines[0]['zone'] == 'us-west2-b'
+    assert machines[1]['deploymentId'] == 'd1'
+    assert machines[1]['machineId'] == 'm2'
+    assert machines[1]['machineName'] == 'computer2'
+    assert machines[1]['projectId'] == 'test_project'
+    assert machines[1]['zone'] == 'test_zone'
+
+
 def test_entitlements(local_backend):
   """Test entitlement endpoints.
 
@@ -676,6 +806,7 @@ def test_entitlements(local_backend):
     assert entitlements[0]['entitlementId'] == 'e1'
     assert entitlements[0]['deploymentId'] == 'd1'
     assert entitlements[0]['machineId'] == 'm1'
+    assert entitlements[0]['userGuid'] == 'guid1'
     assert entitlements[0]['machine']['machineId'] == 'm1'
     assert entitlements[0]['machine']['machineName'] == 'computer1'
 
@@ -688,10 +819,50 @@ def test_entitlements(local_backend):
     assert entitlements[0]['entitlementId'] == 'e1'
     assert entitlements[0]['deploymentId'] == 'd1'
     assert entitlements[0]['machineId'] == 'm1'
+    assert entitlements[0]['userGuid'] == 'guid1'
     assert entitlements[0]['machine']['machineId'] == 'm1'
     assert entitlements[0]['machine']['machineName'] == 'computer1'
     assert entitlements[1]['entitlementId'] == 'e2'
     assert entitlements[1]['deploymentId'] == 'd1'
     assert entitlements[1]['machineId'] == 'm2'
+    assert entitlements[1]['userGuid'] == 'guid2'
     assert entitlements[1]['machine']['machineId'] == 'm2'
     assert entitlements[1]['machine']['machineName'] == 'computer2'
+
+    backend.expect(
+        LocalBackend.POST, camapi.MachinesEntitlements.url,
+        data=['deploymentId', 'machineId', 'userGuid'],
+        result=backend.entitlements_post)
+    backend.expect(
+        LocalBackend.POST, camapi.Machines.url,
+        data=[
+            'provider',
+            'machineName',
+            'deploymentId',
+            'projectId',
+            'zone',
+            'active',
+            'managed',
+        ],
+        result=backend.machines_post)
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlementsADUsers.url,
+        params=dict(deploymentId='d1', userName='User One'),
+        result=dict(total=1, data=[backend.users[0]]))
+
+    machine = cam.machines.post(
+        deployment, 'computer2', 'test_project', 'test_zone')
+    users = cam.machines.entitlements.adusers.get(
+        deployment, userName='User One')
+    entitlement = cam.machines.entitlements.post(machine, users[0])
+    assert entitlement['entitlementId'] == 'e3'
+    assert entitlement['deploymentId'] == 'd1'
+    assert entitlement['machineId'] == 'm2'
+    assert entitlement['userGuid'] == 'guid1'
+
+    entitlements = cam.machines.entitlements.get(deployment)
+    assert len(entitlements) == 3
+    assert entitlements[2]['entitlementId'] == 'e3'
+    assert entitlements[2]['deploymentId'] == 'd1'
+    assert entitlements[2]['machineId'] == 'm2'
+    assert entitlements[2]['userGuid'] == 'guid1'
