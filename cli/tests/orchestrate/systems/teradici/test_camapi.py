@@ -15,6 +15,7 @@
 
 """Test the CAM API."""
 
+import contextlib
 import json
 import os
 from unittest import mock
@@ -178,14 +179,54 @@ def test_connection_with_scope_autodetect():
       assert cam.headers == dict(Authorization='deployment_token')
 
 
-class Backend:
+class LocalBackend:
   """In-memory test data to feed the Python API implementation via requests.
   """
+  GET = 'GET'
+  POST = 'POST'
+
+  class Expectation:
+    """Parameters of an expected API call to the backend.
+    """
+
+    def __init__(self, method, url, params=None, data=None, result=None):
+      """Parameters of an expected API call to the backend.
+
+      Args:
+        method: GET, POST, etc.
+        url: Endpoint URL.
+        params: (optional) Dictionary with query parameters.
+        data: (optional) Dictionary with data payload.
+        result: (optional) Body returned in the response. If not a callable,
+          it uses the value directly to return it in the response.json() method.
+          Otherwise, it will execute the callable with the request parameters
+          so that it can construct a custom response body.
+      """
+      self.method = method
+      self.url = url
+      self.params = params
+      self.data = data
+      self.result = result
+
+    def __repr__(self):
+      text = (
+          'Expecation(method={method}, url={url}, params={params}, data={data},'
+          'result={result}'
+          ).format(**vars(self))
+      return text
 
   def __init__(self, token):
+    """Sample data to return to expected backend calls.
+
+    Request methods are mocked so that it can return predicatble data.
+
+    Args:
+      token: Test API token.
+    """
     self.token = token
-    self.deployments = dict(
-        deployment1={
+    self.expectations = []
+    self.deployments = [
+        {
             'deploymentId': 'd1',
             'resourceGroup': 'rg1',
             'subscriptionId': 's1',
@@ -197,144 +238,124 @@ class Backend:
             'registrationCode': '111AAA',
             'deploymentURI': '',
             'deploymentName': 'deployment1',
-            'status': 'active'},
-        )
-    self.computers = dict(
-        win1={
+            'status': 'active',
+        },
+    ]
+    self.computers = [
+        {
             'deploymentId': 'd1',
             'createdBy': 'u1',
             'operatingSystem': 'Windows Server 2019 Datacenter',
-            'computerName': 'WIN1',
+            'computerName': 'COMPUTER1',
             'computerHostname': 'win1.cloud.demo',
             'operatingSystemVersion': '10.0 (17763)',
-            'createdOn': '2020-06-06T00:11:22.333Z'},
-        )
+            'createdOn': '2020-06-06T00:11:22.333Z',
+        },
+        {
+            'deploymentId': 'd1',
+            'createdBy': 'u1',
+            'operatingSystem': 'Windows Server 2019 Datacenter',
+            'computerName': 'COMPUTER2',
+            'computerHostname': 'win1.cloud.demo',
+            'operatingSystemVersion': '10.0 (17763)',
+            'createdOn': '2020-06-06T00:11:22.333Z',
+        },
+    ]
 
-  def deployments_get(self, url, **options):
-    """GET deployments/.
+  def expect(self, method, url, params=None, data=None, result=None):
+    expectation = LocalBackend.Expectation(method, url, params, data, result)
+    self.expectations.append(expectation)
 
-    Args:
-      url: Endpoint URL
-      **options: Arguments to requests.get
+  def get(self, url, **options):
+    for expectation in self.expectations:
+      if expectation.method == LocalBackend.GET and \
+          expectation.url == url and \
+          expectation.params == options.get('params') and \
+          expectation.data == options.get('data'):
+        return self.make_response(200, expectation.result)
 
-    Returns:
-      A mock response object to requests.get calls.
-    """
-    assert url == camapi.Deployments.url
-    assert options['headers'] == dict(Authorization=self.token)
-    name = options['params']['deploymentName']
-    try:
-      deployment = self.deployments[name]
-      response = mock.MagicMock()
-      response.status_code = 200
-      response.json.return_value = dict(
-          total=1,
-          data=[deployment],
-          )
-      return response
-    except KeyError:
-      response = mock.MagicMock()
-      response.status_code = 200
-      response.json.return_value = dict(
-          total=0,
-          data=[],
-          )
-      return response
+  def post(self, url, **options):
+    for expectation in self.expectations:
+      data = list(options.get('data', dict()).keys())
+      if expectation.method == LocalBackend.POST and \
+          expectation.url == url and \
+          expectation.params == options.get('params') and \
+          sorted(expectation.data) == sorted(data) and \
+          callable(expectation.result):
+        payload = expectation.result(expectation, options)
+        return self.make_response(200, payload)
 
-  def deployments_post(self, url, **options):
-    """POST deployments/.
-
-    Args:
-      url: Endpoint URL
-      **options: Arguments to requests.post
-
-    Returns:
-      A mock response object to requests.post calls.
-    """
-    assert url == camapi.Deployments.url
-    assert options['headers'] == dict(Authorization=self.token)
-    name = options['data']['deploymentName']
-    code = options['data']['registrationCode']
-    deployment = dict(
-        deploymentId='d{}'.format(len(self.deployments)+1),
-        deploymentName=name,
-        registrationCode=code,
-        status='active',
-        )
-    self.deployments[name] = deployment
+  def make_response(self, status_code, payload):
     response = mock.MagicMock()
-    response.status_code = 201
-    response.json.return_value = dict(
-        data=deployment,
-        )
+    response.status_code = status_code
+    response.json.return_value = payload
     return response
 
-  def computers_get(self, url, **options):
-    """GET computers/.
+  def deployments_post(self, expectation, options):
+    deployment = dict(
+        deploymentId='d{}'.format(len(self.deployments)+1),
+        status='active',
+        )
+    for key in expectation.data:
+      deployment[key] = options['data'][key]
+    self.deployments.append(deployment)
+    return dict(data=deployment)
 
-    Args:
-      url: Endpoint URL
-      **options: Arguments to requests.get
-
-    Returns:
-      A mock response object to requests.get calls.
-    """
-    assert url == camapi.MachinesEntitlementsADComputers.url
-    assert options['headers'] == dict(Authorization=self.token)
-    if 'computerName' not in options['params']:
-      response = mock.MagicMock()
-      response.status_code = 200
-      response.json.return_value = dict(
-          total=len(self.computers),
-          data=list(self.computers.values()),
-          )
-      return response
-    else:
-      name = options['params']['computerName']
-      try:
-        computer = self.computers[name]
-        response = mock.MagicMock()
-        response.status_code = 200
-        response.json.return_value = dict(
-            total=1,
-            data=[computer],
-            )
-        return response
-      except KeyError:
-        response = mock.MagicMock()
-        response.status_code = 200
-        response.json.return_value = dict(
-            total=0,
-            data=[],
-            )
-        return response
+  @contextlib.contextmanager
+  def activate(self):
+    with mock.patch('requests.get', side_effect=self.get):
+      with mock.patch('requests.post', side_effect=self.post):
+        yield self
 
 
-def test_deployments():
+@pytest.fixture
+def local_backend():
+  return LocalBackend(token='123abc')
+
+
+def test_deployments(local_backend):
   """Test deployments endpoints.
-  """
-  backend = Backend(token='123abc')
-  cam = camapi.CloudAccessManager(token=backend.token)
 
-  with mock.patch('requests.get', side_effect=backend.deployments_get):
+  Args:
+    local_backend: Backend that intercepts requests and returns predictable
+      test data.
+  """
+  with local_backend.activate() as backend:
+    backend.expect(
+        LocalBackend.GET, camapi.Deployments.url,
+        params=dict(deploymentName='deployment1', showactive='true'),
+        result=dict(total=1, data=[backend.deployments[0]]))
+    backend.expect(
+        LocalBackend.GET, camapi.Deployments.url,
+        params=dict(deploymentName='non-existent-deployment',
+                    showactive='true'),
+        result=dict(total=0, data=[]))
+    backend.expect(
+        LocalBackend.POST, camapi.Deployments.url,
+        data=['deploymentName', 'registrationCode'],
+        result=backend.deployments_post)
+
+    cam = camapi.CloudAccessManager(token=backend.token)
     deployment = cam.deployments.get('deployment1')
     assert deployment['deploymentId'] == 'd1'
     assert deployment['deploymentName'] == 'deployment1'
     assert deployment['registrationCode'] == '111AAA'
     assert deployment['status'] == 'active'
 
-  with mock.patch('requests.get', side_effect=backend.deployments_get):
     deployment = cam.deployments.get('non-existent-deployment')
     assert not deployment
 
-  with mock.patch('requests.post', side_effect=backend.deployments_post):
     deployment = cam.deployments.post('deployment2', '222BBB')
     assert deployment['deploymentId'] == 'd2'
     assert deployment['deploymentName'] == 'deployment2'
     assert deployment['registrationCode'] == '222BBB'
     assert deployment['status'] == 'active'
 
-  with mock.patch('requests.get', side_effect=backend.deployments_get):
+    backend.expect(
+        LocalBackend.GET, camapi.Deployments.url,
+        params=dict(deploymentName='deployment2', showactive='true'),
+        result=dict(total=1, data=[backend.deployments[1]]))
+
     deployment = cam.deployments.get('deployment2')
     assert deployment['deploymentId'] == 'd2'
     assert deployment['deploymentName'] == 'deployment2'
@@ -342,31 +363,43 @@ def test_deployments():
     assert deployment['status'] == 'active'
 
 
-def test_computers():
+def test_computers(local_backend):
   """Test computers endpoints.
   """
-  backend = Backend(token='123abc')
-  cam = camapi.CloudAccessManager(token=backend.token)
+  with local_backend.activate() as backend:
+    backend.expect(
+        LocalBackend.GET, camapi.Deployments.url,
+        params=dict(deploymentName='deployment1', showactive='true'),
+        result=dict(total=1, data=[backend.deployments[0]]))
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlementsADComputers.url,
+        params=dict(deploymentId='d1', computerName='computer1'),
+        result=dict(total=1, data=[backend.computers[0]]))
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlementsADComputers.url,
+        params=dict(deploymentId='d1', computerName='non-existent-computer'),
+        result=dict(total=0, data=[]))
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlementsADComputers.url,
+        params=dict(deploymentId='d1'),
+        result=dict(total=2, data=backend.computers))
 
-  with mock.patch('requests.get', side_effect=backend.deployments_get):
+    cam = camapi.CloudAccessManager(token=backend.token)
     deployment = cam.deployments.get('deployment1')
 
-  with mock.patch('requests.get', side_effect=backend.computers_get):
     computers = cam.machines.entitlements.adcomputers.get(
-        deployment, computerName='win1')
+        deployment, computerName='computer1')
     assert len(computers) == 1
     assert computers[0]['deploymentId'] == 'd1'
-    assert computers[0]['computerName'] == 'WIN1'
+    assert computers[0]['computerName'] == 'COMPUTER1'
 
-  with mock.patch('requests.get', side_effect=backend.computers_get):
     computers = cam.machines.entitlements.adcomputers.get(
         deployment, computerName='non-existent-computer')
     assert not computers
 
-  with mock.patch('requests.get', side_effect=backend.computers_get):
     computers = cam.machines.entitlements.adcomputers.get(deployment)
-    assert len(computers) == 1
+    assert len(computers) == 2
     assert computers[0]['deploymentId'] == 'd1'
-    assert computers[0]['computerName'] == 'WIN1'
-    # assert computers[0]['deploymentId'] == 'd1'
-    # assert computers[0]['computerName'] == 'computer2'
+    assert computers[0]['computerName'] == 'COMPUTER1'
+    assert computers[1]['deploymentId'] == 'd1'
+    assert computers[1]['computerName'] == 'COMPUTER2'
