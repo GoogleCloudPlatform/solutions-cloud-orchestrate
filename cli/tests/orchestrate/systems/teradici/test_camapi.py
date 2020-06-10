@@ -215,7 +215,7 @@ class LocalBackend:
           ).format(**vars(self))
       return text
 
-  class UnexpectedRequestException(Exception):
+  class UnexpectedRequestError(Exception):
     """A request was attempted but the unit tests were not expecting it.
     """
 
@@ -229,6 +229,7 @@ class LocalBackend:
         options: Parmeters for the endpoint request.
       """
       super().__init__(message)
+      self.method = method
       self.url = url
       self.options = options
 
@@ -304,6 +305,96 @@ class LocalBackend:
             'createdOn': '2020-06-06T00:22:33.444Z',
         },
     ]
+    self.entitlements = [
+        {
+            'entitlementId': 'e1',
+            'deploymentId': 'd1',
+            'createdBy': 'u0',
+            'createdOn': '2020-06-06T05:31:49.268Z',
+            'updatedOn': '2020-06-06T05:31:49.268Z',
+            'userGuid': 'guid1',
+            'status': 'active',
+            'machineId': 'm1',
+            'machine': {
+                'machineId': 'm1',
+                'provider': 'gcp',
+                'subscriptionId': 'd1',
+                'machineName': 'computer1',
+                'hostName': 'computer1',
+                'deploymentId': 'd1',
+                'connectorId': '',
+                'resourceGroup': 'us-west2-b',
+                'powerState': 'unknown',
+                'createdBy': 'u0',
+                'createdOn': '2020-06-06T05:31:34.672Z',
+                'updatedOn': '2020-06-06T05:31:34.673Z',
+                'active': True,
+                'location': 'unknown',
+                'vmSize': 'unknown',
+                'osInfo': {
+                    'publisher': 'unknown',
+                    'offer': 'unknown',
+                    'sku': 'unknown',
+                    'version': 'unknown',
+                },
+                'provisioningStatus': {
+                    'state': 'succeeded',
+                    'message': '',
+                    'deployment': {},
+                    'attributes': {},
+                },
+                'status': 'active',
+                'projectId': 'test',
+                'zone': 'us-west2-b',
+                'powerStateLastChangedOn': '2020-06-06T05:31:34.673Z',
+                'managed': True,
+            },
+        },
+        {
+            'entitlementId': 'e2',
+            'deploymentId': 'd1',
+            'createdBy': 'u0',
+            'createdOn': '2020-06-06T05:31:49.268Z',
+            'updatedOn': '2020-06-06T05:31:49.268Z',
+            'userGuid': 'guid2',
+            'status': 'active',
+            'machineId': 'm2',
+            'machine': {
+                'machineId': 'm2',
+                'provider': 'gcp',
+                'subscriptionId': 'd1',
+                'machineName': 'computer2',
+                'hostName': 'computer2',
+                'deploymentId': 'd1',
+                'connectorId': '',
+                'resourceGroup': 'us-west2-b',
+                'powerState': 'unknown',
+                'createdBy': 'u0',
+                'createdOn': '2020-06-06T05:31:34.672Z',
+                'updatedOn': '2020-06-06T05:31:34.673Z',
+                'active': True,
+                'location': 'unknown',
+                'vmSize': 'unknown',
+                'osInfo': {
+                    'publisher': 'unknown',
+                    'offer': 'unknown',
+                    'sku': 'unknown',
+                    'version': 'unknown',
+                },
+                'provisioningStatus': {
+                    'state': 'succeeded',
+                    'message': '',
+                    'deployment': {},
+                    'attributes': {},
+                },
+                'status': 'active',
+                'projectId': 'test',
+                'zone': 'us-west2-b',
+                'powerStateLastChangedOn': '2020-06-06T05:31:34.673Z',
+                'managed': True,
+            },
+        },
+    ]
 
   def expect(self, method, url, params=None, data=None, result=None):
     expectation = LocalBackend.Expectation(method, url, params, data, result)
@@ -320,7 +411,7 @@ class LocalBackend:
       A mock response to emulate the ones returned by requests.get.
 
     Raises:
-      UnexpectedRequestException if the request was not previously expected by
+      UnexpectedRequestError if the request was not previously expected by
         calling expect().
     """
     for expectation in self.expectations:
@@ -342,7 +433,7 @@ class LocalBackend:
       A mock response to emulate the ones returned by requests.post.
 
     Raises:
-      UnexpectedRequestException if the request was not previously expected by
+      UnexpectedRequestError if the request was not previously expected by
         calling expect().
     """
     for expectation in self.expectations:
@@ -365,7 +456,7 @@ class LocalBackend:
       options: Request parameters.
 
     Raises:
-      UnexpectedRequestException because the request was not previously expected
+      UnexpectedRequestError because the request was not previously expected
       by calling expect().
     """
     message = (
@@ -373,7 +464,7 @@ class LocalBackend:
         ' via LocalBackend.expect() would help? Or, review the tests for typos'
         ' or missing parameters.'
         ).format(method, url)
-    raise self.UnexpectedRequestException(message, method, url, options)
+    raise self.UnexpectedRequestError(message, method, url, options)
 
   def make_response(self, status_code, payload):
     response = mock.MagicMock()
@@ -549,3 +640,58 @@ def test_users(local_backend):
     assert users[1]['userGuid'] == 'guid2'
     assert users[1]['name'] == 'User Two'
     assert users[1]['userName'] == 'user2'
+
+
+def test_entitlements(local_backend):
+  """Test entitlement endpoints.
+
+  Args:
+    local_backend: Backend that intercepts requests and returns predictable
+      test data.
+  """
+  with local_backend.activate() as backend:
+    backend.expect(
+        LocalBackend.GET, camapi.Deployments.url,
+        params=dict(deploymentName='deployment1', showactive='true'),
+        result=dict(total=1, data=[backend.deployments[0]]))
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlements.url,
+        params=dict(deploymentId='d1', machineName='computer1'),
+        result=dict(total=1, data=[backend.entitlements[0]]))
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlements.url,
+        params=dict(deploymentId='d1', machineName='non-existent-computer'),
+        result=dict(total=0, data=[]))
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlements.url,
+        params=dict(deploymentId='d1'),
+        result=dict(total=2, data=backend.entitlements))
+
+    cam = camapi.CloudAccessManager(token=backend.token)
+    deployment = cam.deployments.get('deployment1')
+
+    entitlements = cam.machines.entitlements.get(
+        deployment, machineName='computer1')
+    assert len(entitlements) == 1
+    assert entitlements[0]['entitlementId'] == 'e1'
+    assert entitlements[0]['deploymentId'] == 'd1'
+    assert entitlements[0]['machineId'] == 'm1'
+    assert entitlements[0]['machine']['machineId'] == 'm1'
+    assert entitlements[0]['machine']['machineName'] == 'computer1'
+
+    entitlements = cam.machines.entitlements.get(
+        deployment, machineName='non-existent-computer')
+    assert not entitlements
+
+    entitlements = cam.machines.entitlements.get(deployment)
+    assert len(entitlements) == 2
+    assert entitlements[0]['entitlementId'] == 'e1'
+    assert entitlements[0]['deploymentId'] == 'd1'
+    assert entitlements[0]['machineId'] == 'm1'
+    assert entitlements[0]['machine']['machineId'] == 'm1'
+    assert entitlements[0]['machine']['machineName'] == 'computer1'
+    assert entitlements[1]['entitlementId'] == 'e2'
+    assert entitlements[1]['deploymentId'] == 'd1'
+    assert entitlements[1]['machineId'] == 'm2'
+    assert entitlements[1]['machine']['machineId'] == 'm2'
+    assert entitlements[1]['machine']['machineName'] == 'computer2'
