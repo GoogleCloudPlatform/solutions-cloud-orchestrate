@@ -215,6 +215,23 @@ class LocalBackend:
           ).format(**vars(self))
       return text
 
+  class UnexpectedRequestException(Exception):
+    """A request was attempted but the unit tests were not expecting it.
+    """
+
+    def __init__(self, message, method, url, options):
+      """Store details about what was expected and what was received.
+
+      Args:
+        message: Detail message about the error.
+        method: GET, POST, etc.
+        url: Attempted endpoint.
+        options: Parmeters for the endpoint request.
+      """
+      super().__init__(message)
+      self.url = url
+      self.options = options
+
   def __init__(self, token):
     """Sample data to return to expected backend calls.
 
@@ -261,20 +278,73 @@ class LocalBackend:
             'createdOn': '2020-06-06T00:11:22.333Z',
         },
     ]
+    self.users = [
+        {
+            'usnChanged': '',
+            'groups': [],
+            'name': 'User One',
+            'enabled': True,
+            '_id': 'u1',
+            'userGuid': 'guid1',
+            'deploymentId': 'd1',
+            'userName': 'user1',
+            'createdBy': 'u0',
+            'createdOn': '2020-06-06T00:22:33.444Z',
+        },
+        {
+            'usnChanged': '',
+            'groups': [],
+            'name': 'User Two',
+            'enabled': True,
+            '_id': 'u2',
+            'userGuid': 'guid2',
+            'deploymentId': 'd1',
+            'userName': 'user2',
+            'createdBy': 'u0',
+            'createdOn': '2020-06-06T00:22:33.444Z',
+        },
+    ]
 
   def expect(self, method, url, params=None, data=None, result=None):
     expectation = LocalBackend.Expectation(method, url, params, data, result)
     self.expectations.append(expectation)
 
   def get(self, url, **options):
+    """Mock requests.get.
+
+    Args:
+      url: Endpoint URL.
+      **options: Request parameters.
+
+    Returns:
+      A mock response to emulate the ones returned by requests.get.
+
+    Raises:
+      UnexpectedRequestException if the request was not previously expected by
+        calling expect().
+    """
     for expectation in self.expectations:
       if expectation.method == LocalBackend.GET and \
           expectation.url == url and \
           expectation.params == options.get('params') and \
           expectation.data == options.get('data'):
         return self.make_response(200, expectation.result)
+    self.unexpected_request(self.GET, url, options)
 
   def post(self, url, **options):
+    """Mock requests.post.
+
+    Args:
+      url: Endpoint URL.
+      **options: Request parameters.
+
+    Returns:
+      A mock response to emulate the ones returned by requests.post.
+
+    Raises:
+      UnexpectedRequestException if the request was not previously expected by
+        calling expect().
+    """
     for expectation in self.expectations:
       data = list(options.get('data', dict()).keys())
       if expectation.method == LocalBackend.POST and \
@@ -284,6 +354,26 @@ class LocalBackend:
           callable(expectation.result):
         payload = expectation.result(expectation, options)
         return self.make_response(200, payload)
+    self.unexpected_request(self.POST, url, options)
+
+  def unexpected_request(self, method, url, options):
+    """Raises an exception with useful message and data.
+
+    Args:
+      method: GET, POST, etc.
+      url: Endpoint URL.
+      options: Request parameters.
+
+    Raises:
+      UnexpectedRequestException because the request was not previously expected
+      by calling expect().
+    """
+    message = (
+        'Unexpected {} {} request during tests. Perhaps adding an Expectation'
+        ' via LocalBackend.expect() would help? Or, review the tests for typos'
+        ' or missing parameters.'
+        ).format(method, url)
+    raise self.UnexpectedRequestException(message, method, url, options)
 
   def make_response(self, status_code, payload):
     response = mock.MagicMock()
@@ -365,6 +455,10 @@ def test_deployments(local_backend):
 
 def test_computers(local_backend):
   """Test computers endpoints.
+
+  Args:
+    local_backend: Backend that intercepts requests and returns predictable
+      test data.
   """
   with local_backend.activate() as backend:
     backend.expect(
@@ -403,3 +497,55 @@ def test_computers(local_backend):
     assert computers[0]['computerName'] == 'COMPUTER1'
     assert computers[1]['deploymentId'] == 'd1'
     assert computers[1]['computerName'] == 'COMPUTER2'
+
+
+def test_users(local_backend):
+  """Test user endpoints.
+
+  Args:
+    local_backend: Backend that intercepts requests and returns predictable
+      test data.
+  """
+  with local_backend.activate() as backend:
+    backend.expect(
+        LocalBackend.GET, camapi.Deployments.url,
+        params=dict(deploymentName='deployment1', showactive='true'),
+        result=dict(total=1, data=[backend.deployments[0]]))
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlementsADUsers.url,
+        params=dict(deploymentId='d1', userName='User One'),
+        result=dict(total=1, data=[backend.users[0]]))
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlementsADUsers.url,
+        params=dict(deploymentId='d1', userName='non-existent-user'),
+        result=dict(total=0, data=[]))
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlementsADUsers.url,
+        params=dict(deploymentId='d1'),
+        result=dict(total=2, data=backend.users))
+
+    cam = camapi.CloudAccessManager(token=backend.token)
+    deployment = cam.deployments.get('deployment1')
+
+    users = cam.machines.entitlements.adusers.get(
+        deployment, userName='User One')
+    assert len(users) == 1
+    assert users[0]['deploymentId'] == 'd1'
+    assert users[0]['userGuid'] == 'guid1'
+    assert users[0]['name'] == 'User One'
+    assert users[0]['userName'] == 'user1'
+
+    users = cam.machines.entitlements.adusers.get(
+        deployment, userName='non-existent-user')
+    assert not users
+
+    users = cam.machines.entitlements.adusers.get(deployment)
+    assert len(users) == 2
+    assert users[0]['deploymentId'] == 'd1'
+    assert users[0]['userGuid'] == 'guid1'
+    assert users[0]['name'] == 'User One'
+    assert users[0]['userName'] == 'user1'
+    assert users[1]['deploymentId'] == 'd1'
+    assert users[1]['userGuid'] == 'guid2'
+    assert users[1]['name'] == 'User Two'
+    assert users[1]['userName'] == 'user2'
