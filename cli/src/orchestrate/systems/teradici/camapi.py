@@ -58,23 +58,23 @@ class CloudAccessManager(Namespace):
     - machines.entitlements.post -> POST machines/entitlements'
   """
 
-  def __init__(self, api_token=None, project=None, scope=Scope.NONE,
+  def __init__(self, token=None, project=None, scope=Scope.NONE,
                credentials_file_name=None):
     """Initializes API with given token or credentials.
 
     Attempt to connect to the backend in the following order:
-    1. Use api_token if provided.
+    1. Use token if provided.
     2. Locate the service account credentials using the project name and scope
        in the following pattern:
        ~/.config/teradici/{project}-{scope}.json
     3. Locate the service account credentials from credentials_file_name.
 
-    Note that api_token, project & scope, and credentials_file_name are
+    Note that token, project & scope, and credentials_file_name are
     mutually exclusive. If all are provided, they are attempted in the order
     above and stop when the first connection method succeeds.
 
     Args:
-      api_token: CAM organization level API token.
+      token: CAM organization level API token.
       project: GCP project name.
       scope: Intended use, i.e. "cam", "deployment". This allows for credentials
         of different types of CAM service accounts. Currently, a "CAM-level"
@@ -108,10 +108,10 @@ class CloudAccessManager(Namespace):
             ),
         )
 
-    if api_token:
-      self.scope = Scope.API
+    if token:
+      self.scope = Scope.ALL
 
-    if not api_token and project and scope:
+    if not token and project and scope:
       scope_name = scope.name.lower()
       log.debug('Locating CAM service account credentials using project %s'
                 ' and scope %s', project, scope_name)
@@ -120,19 +120,19 @@ class CloudAccessManager(Namespace):
           scope=scope_name,
           )
       try:
-        api_token, self.scope = self.auth.signin.post(file_name)
+        token, self.scope = self.auth.signin.post(file_name)
       except FileNotFoundError:
         log.error('Could not locate CAM service account credentials file at %s',
                   file_name)
 
-    if not api_token and credentials_file_name:
+    if not token and credentials_file_name:
       try:
-        api_token, self.scope = self.auth.signin.post(credentials_file_name)
+        token, self.scope = self.auth.signin.post(credentials_file_name)
       except FileNotFoundError:
         log.error('Could not locate CAM service account credentials file at %s',
                   credentials_file_name)
 
-    if not api_token:
+    if not token:
       message = (
           'Unable to get a valid CAM API token. You may provide an API token,'
           ' project & deployment names, or the file name of a CAM service'
@@ -141,7 +141,7 @@ class CloudAccessManager(Namespace):
       raise RuntimeError(message)
 
     Namespace.headers = dict(
-        Authorization=api_token,
+        Authorization=token,
         )
 
 
