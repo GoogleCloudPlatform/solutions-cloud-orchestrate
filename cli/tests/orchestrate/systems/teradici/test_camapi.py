@@ -866,3 +866,44 @@ def test_entitlements(local_backend):
     assert entitlements[2]['deploymentId'] == 'd1'
     assert entitlements[2]['machineId'] == 'm2'
     assert entitlements[2]['userGuid'] == 'guid1'
+
+
+def test_request_iterator(local_backend):
+  """Test RequestIterator.
+
+  Args:
+    local_backend: Backend that intercepts requests and returns predictable
+      test data.
+  """
+  with local_backend.activate() as backend:
+    backend.expect(
+        LocalBackend.GET, camapi.Deployments.url,
+        params=dict(deploymentName='deployment1', showactive='true'),
+        result=dict(total=1, data=[backend.deployments[0]]))
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlementsADUsers.url,
+        params=dict(deploymentId='d1', offset=0, limit=1),
+        result=dict(total=1, data=[backend.users[0]]))
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlementsADUsers.url,
+        params=dict(deploymentId='d1', offset=1, limit=1),
+        result=dict(total=1, data=[backend.users[1]]))
+    backend.expect(
+        LocalBackend.GET, camapi.MachinesEntitlementsADUsers.url,
+        params=dict(deploymentId='d1', offset=2, limit=1),
+        result=dict(total=0, data=[]))
+
+    cam = camapi.CloudAccessManager(token=backend.token)
+    deployment = cam.deployments.get('deployment1')
+    assert deployment['deploymentId'] == 'd1'
+    assert deployment['deploymentName'] == 'deployment1'
+    assert deployment['registrationCode'] == '111AAA'
+    assert deployment['status'] == 'active'
+
+    users = camapi.RequestIterator(cam.machines.entitlements.adusers.get,
+                                   deployment, limit=1)
+    index = 0
+    for user in users:
+      index += 1
+      guid = 'guid{}'.format(index)
+      assert user['userGuid'] == guid
