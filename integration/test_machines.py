@@ -16,7 +16,6 @@
 """Test basic template and machine orchestration."""
 
 import logging
-import os
 import subprocess
 import time
 import uuid
