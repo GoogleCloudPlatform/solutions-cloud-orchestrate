@@ -19,18 +19,20 @@ FROM gcr.io/google_appengine/python
 
 # Create a virtualenv for dependencies. This isolates these packages from
 # system-level packages.
-RUN virtualenv /env
+RUN virtualenv -p python3.5 /env
 
 # Setting these environment variables are the same as running
 # source /env/bin/activate.
 ENV VIRTUAL_ENV -p python3.5 /env
 ENV PATH /env/bin:$PATH
-ENV ORCHESTRATE_PROJECT PLACEHOLDER_ORCHESTRATE_PROJECT
+ENV ORCHESTRATE_PROJECT altotest1
 
-COPY requirements.txt /app/
+COPY requirements.txt /app
 RUN pip install --requirement /app/requirements.txt
 COPY . /app/
+WORKDIR /app
+RUN python setup.py develop
 
 ENTRYPOINT []
 
-CMD ["python", "/app/orchestrate.py"]
+CMD ["orchestrateapi"]

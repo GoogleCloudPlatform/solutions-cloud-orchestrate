@@ -15,18 +15,25 @@
 
 current_dir=$(dirname $(realpath ${BASH_SOURCE[0]}))
 api_dir=$(dirname $current_dir)
+output_dir=$(dirname $current_dir)/orchestrateapi
 orchestrate_dir=$(dirname $api_dir)
 source $orchestrate_dir/environ.sh
 
 echo "Compiling protos..."
 
 python -m grpc.tools.protoc \
-    --include_imports \
-    --include_source_info \
     --proto_path=$api_dir/protos \
-    --python_out=$api_dir \
-    --grpc_python_out=$api_dir \
-    --descriptor_set_out=$api_dir/api_descriptor.pb \
+    --python_out=$output_dir \
+    --grpc_python_out=$output_dir \
     orchestrate.proto
+
+# Fix weird Python import error when attempting to import orchestrate_pb2_grpc
+# because it cannot find its sibling orchestrate_pb2.
+echo "Fixing Python import statements with relative imports..."
+file=$output_dir/orchestrate_pb2_grpc.py
+sed -e 's/^import orchestrate_pb2 as orchestrate__pb2$/from . import orchestrate_pb2 as orchestrate__pb2/g' \
+  $file > $file.fixed
+cp $file.fixed $file
+rm -f $file.fixed
 
 echo "Done."

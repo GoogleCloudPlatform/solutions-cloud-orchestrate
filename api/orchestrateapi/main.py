@@ -20,8 +20,8 @@ import time
 
 import grpc
 
-import orchestrate_pb2_grpc
-from orchestrateapi import orchestrate
+from orchestrateapi import orchestrate_pb2_grpc
+from orchestrateapi import servicer
 
 
 def start_server():
@@ -31,7 +31,7 @@ def start_server():
   port = 50051
   server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
   orchestrate_pb2_grpc.add_OrchestrateServicer_to_server(
-      orchestrate.Orchestrate(), server)
+      servicer.Orchestrate(), server)
   server.add_insecure_port('[::]:{}'.format(port))
   server.start()
   print('Listening on port {}'.format(port))

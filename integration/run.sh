@@ -14,25 +14,22 @@
 # limitations under the License.
 
 current_dir=$(dirname $(realpath ${BASH_SOURCE[0]}))
-api_dir=$(dirname $current_dir)
-orchestrate_dir=$(dirname $api_dir)
+integration_dir=$current_dir
+orchestrate_dir=$(dirname $integration_dir)
 source $orchestrate_dir/environ.sh
 
-cluster=orchestrate
-tag=$(date +%Y%m%dt%H%M%S)
+export ORCHESTRATE_API_HOST=localhost:50051
+export GOOGLE_APPLICATION_CREDENTIALS=~/.private/${ORCHESTRATE_PROJECT}.json
 
-echo "Updating Kubernetes cluster for API..."
+echo "Running integration tests..."
+echo "ORCHESTRATE_PROJECT           : $ORCHESTRATE_PROJECT"
+echo "ORCHESTRATE_API_HOST          : $ORCHESTRATE_API_HOST"
+echo "GOOGLE_APPLICATION_CREDENTIALS: $GOOGLE_APPLICATION_CREDENTIALS"
+if [[ ! -e ${GOOGLE_APPLICATION_CREDENTIALS} ]]; then
+  echo "Unable to find service account keys for project $project at $GOOGLE_APPLICATION_CREDENTIALS"
+  exit 1
+fi
 
-# source $current_dir/compile_protos.sh
-# source $current_dir/deploy_endpoints.sh
-#
-# echo "Building image $tag..."
-# gcloud --project=$project builds submit --tag gcr.io/$project/orchestrate:$tag $api_dir
-
-echo "Updating deployment image..."
-kubectl --context=$gke_context set image deployment orchestrate orchestrate=gcr.io/$project/orchestrate:$tag
-
-echo "Getting rollout status..."
-kubectl --context=$gke_context rollout status deployment orchestrate
+py.test $integration_dir --log-cli-level=INFO
 
 echo "Done."

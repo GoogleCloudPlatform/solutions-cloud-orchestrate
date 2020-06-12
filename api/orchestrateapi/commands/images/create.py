@@ -19,8 +19,9 @@ from google.cloud import error_reporting
 from google.cloud import pubsub_v1
 from google.protobuf.json_format import MessageToJson
 
-import orchestrate_pb2
 from orchestrateapi import environ
+from orchestrateapi import orchestrate_pb2
+
 
 TOPIC_CREATE_IMAGE = 'image_provisioning_start'
 

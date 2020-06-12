@@ -20,17 +20,13 @@ import subprocess
 import time
 import uuid
 
+import orchestrateapi.main
 import orchestrate.main
 
 import pytest
 
 
 log = logging.getLogger(__name__)
-
-
-@pytest.fixture()
-def tag():
-  return 'oit{}'.format(uuid.uuid4().hex[:5])
 
 
 def wait(seconds, message):

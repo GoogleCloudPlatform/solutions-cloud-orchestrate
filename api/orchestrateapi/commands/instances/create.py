@@ -22,15 +22,17 @@ from googleapiclient import errors
 from oauth2client.client import GoogleCredentials
 from google.cloud import error_reporting
 
-import orchestrate_pb2
 from orchestrateapi import environ
+from orchestrateapi import orchestrate_pb2
+
 
 error_client = error_reporting.Client()
 
 # Connect to Google Cloud Compute Engine API using the environment's service
 # account.
 credentials = GoogleCredentials.get_application_default()
-compute = discovery.build('compute', 'v1', credentials=credentials)
+compute = discovery.build('compute', 'v1', credentials=credentials,
+                          cache_discovery=False)
 
 
 class OrchestrateInstanceCreationError(Exception):

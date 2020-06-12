@@ -16,7 +16,7 @@
 """Implements the Orchestrate API Service."""
 
 
-import orchestrate_pb2_grpc
+from orchestrateapi import orchestrate_pb2_grpc
 from orchestrateapi.commands import images
 from orchestrateapi.commands import instances
 from orchestrateapi.commands import projects
