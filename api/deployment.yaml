@@ -47,13 +47,13 @@ spec:
         args: [
           "--http2_port=9000",
           "--backend=grpc://127.0.0.1:50051",
-          "--service=orchestrate.endpoints.PLACEHOLDER_ORCHESTRATE_PROJECT.cloud.goog",
+          "--service=orchestrate.endpoints.altotest1.cloud.goog",
           "--rollout_strategy=managed",
         ]
         ports:
           - containerPort: 9000
       - name: orchestrate
-        image: gcr.io/PLACEHOLDER_ORCHESTRATE_PROJECT/orchestrate:20190619t000000
+        image: gcr.io/altotest1/orchestrate:20190619t000000
         ports:
           - containerPort: 50051
         volumeMounts:

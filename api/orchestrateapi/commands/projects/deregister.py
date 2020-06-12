@@ -20,8 +20,9 @@ from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
 from google.cloud import error_reporting
 
-import orchestrate_pb2
 from orchestrateapi import environ
+from orchestrateapi import orchestrate_pb2
+
 
 error_client = error_reporting.Client()
 
@@ -29,8 +30,10 @@ error_client = error_reporting.Client()
 # account.
 credentials = GoogleCredentials.get_application_default()
 resource_manager = discovery.build('cloudresourcemanager', 'v1',
-                                   credentials=credentials)
-storage = discovery.build('storage', 'v1', credentials=credentials)
+                                   credentials=credentials,
+                                   cache_discovery=False)
+storage = discovery.build('storage', 'v1', credentials=credentials,
+                          cache_discovery=False)
 
 
 def run(request, context):

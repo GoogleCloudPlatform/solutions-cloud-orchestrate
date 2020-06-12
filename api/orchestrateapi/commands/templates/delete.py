@@ -17,11 +17,10 @@
 
 import uuid
 
-import orchestrate_pb2
-
 from googleapiclient import discovery
 from googleapiclient import errors
 from oauth2client.client import GoogleCredentials
+from orchestrateapi import orchestrate_pb2
 from google.cloud import error_reporting
 
 error_client = error_reporting.Client()
@@ -29,7 +28,8 @@ error_client = error_reporting.Client()
 # Connect to Google Cloud Compute Engine API using the environment's service
 # account.
 credentials = GoogleCredentials.get_application_default()
-compute = discovery.build('compute', 'v1', credentials=credentials)
+compute = discovery.build('compute', 'v1', credentials=credentials,
+                          cache_discovery=False)
 
 
 class OrchestrateTemplateDeletionError(Exception):

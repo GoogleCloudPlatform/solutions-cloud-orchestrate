@@ -20,22 +20,31 @@ import time
 
 import grpc
 
-import orchestrate_pb2_grpc
-from orchestrateapi import orchestrate
+from orchestrateapi import orchestrate_pb2_grpc
+from orchestrateapi import servicer
 
 
-def main():
-  """Serves gRPC endpoints.
+def start_server():
+  """Returns a GRPC server instance initialized and ready to server requests.
   """
   print('Starting local Orchestrate API')
-
   port = 50051
   server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-  orchestrate_pb2_grpc.add_OrchestrateServicer_to_server(orchestrate.Orchestrate(), server)
+  orchestrate_pb2_grpc.add_OrchestrateServicer_to_server(
+      servicer.Orchestrate(), server)
   server.add_insecure_port('[::]:{}'.format(port))
   server.start()
-
   print('Listening on port {}'.format(port))
+  return server
+
+
+def stop_server(server):
+  server.stop(grace=0)
+
+
+def keep_alive():
+  """Keep process alive until Ctrl+C or process is otherwise terminated.
+  """
   print('Press Ctrl+C to stop.')
   # gRPC starts a new thread to service requests. Just make the main thread
   # sleep.
@@ -44,7 +53,15 @@ def main():
     while True:
       time.sleep(delay)
   except KeyboardInterrupt:
-    server.stop(grace=0)
+    pass
+
+
+def main():
+  """Serves gRPC endpoints.
+  """
+  server = start_server()
+  keep_alive()
+  stop_server(server)
 
 
 if __name__ == '__main__':
