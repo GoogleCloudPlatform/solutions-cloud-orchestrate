@@ -74,6 +74,7 @@ gcloud --project=$project container clusters update $cluster \
   --logging-service logging.googleapis.com
 
 echo "Provisioning service account credentials..."
+mkdir -p $HOME/.private
 kubectl create secret generic service-account-key \
   --from-file=key.json=$HOME/.private/$project.json
 
