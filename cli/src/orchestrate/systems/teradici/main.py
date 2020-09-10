@@ -74,7 +74,9 @@ class CloudAccessSoftware(base.OrchestrateSystem):
     self.windows_accelerator_count = 1
 
     # Overrides
-    self.git_url = 'https://github.com/teradici/cloud_deployment_scripts'
+    # Luis made his own branch and modified Sherman's code.
+    # TODO: migrate all this to Sherman's v2 code.
+    self.git_url = 'https://github.com/luisartolag/cloud_deployment_scripts'
     self.git_branch = 'master'
     self.deploy_dir = ''
     self.terraform_version = '0.12.7'

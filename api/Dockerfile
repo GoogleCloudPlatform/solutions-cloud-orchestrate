@@ -25,7 +25,7 @@ RUN virtualenv -p python3.5 /env
 # source /env/bin/activate.
 ENV VIRTUAL_ENV -p python3.5 /env
 ENV PATH /env/bin:$PATH
-ENV ORCHESTRATE_PROJECT altotest1
+ENV ORCHESTRATE_PROJECT PLACEHOLDER_ORCHESTRATE_PROJECT
 
 COPY requirements.txt /app
 RUN pip install --requirement /app/requirements.txt
