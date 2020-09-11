@@ -77,7 +77,7 @@ class CloudAccessSoftware(base.OrchestrateSystem):
     # Luis made his own branch and modified Sherman's code.
     # TODO: migrate all this to Sherman's v2 code.
     self.git_url = 'https://github.com/luisartolag/cloud_deployment_scripts'
-    self.git_branch = 'master'
+    self.git_branch = 'orchestrate-20200910'
     self.deploy_dir = ''
     self.terraform_version = '0.12.7'
 
