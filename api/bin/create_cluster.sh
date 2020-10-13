@@ -66,6 +66,7 @@ gcloud --project=$project builds submit --tag gcr.io/$project/orchestrate:$tag $
 
 echo "Creating cluster $cluster..."
 gcloud --project=$project container clusters create $cluster \
+  --cluster-version=1.15.12-gke.20 \
   --zone=$zone \
   --network=$network \
   --subnetwork=$subnetwork
