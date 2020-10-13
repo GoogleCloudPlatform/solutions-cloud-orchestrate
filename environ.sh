@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project=altotest1
+project=PLACEHOLDER_ORCHESTRATE_PROJECT
 bucket="gs://${project}"
 gke_context="gke_${project}_us-central1-a_orchestrate"
 

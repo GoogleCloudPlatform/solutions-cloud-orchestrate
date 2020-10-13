@@ -15,7 +15,7 @@
 type: google.api.Service
 config_version: 3
 
-name: orchestrate.endpoints.altotest1.cloud.goog
+name: orchestrate.endpoints.PLACEHOLDER_ORCHESTRATE_PROJECT.cloud.goog
 title: Orchestrate API
 apis:
 - name: orchestrate.Orchestrate
