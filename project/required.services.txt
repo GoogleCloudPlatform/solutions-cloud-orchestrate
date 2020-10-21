@@ -13,3 +13,4 @@ pubsub.googleapis.com
 servicecontrol.googleapis.com
 servicemanagement.googleapis.com
 serviceusage.googleapis.com
+deploymentmanager.googleapis.com
