@@ -21,11 +21,11 @@ source $orchestrate_dir/environ.sh
 
 echo "Compiling protos..."
 
-python -m grpc.tools.protoc \
-    --proto_path=$api_dir/protos \
-    --python_out=$output_dir \
-    --grpc_python_out=$output_dir \
-    orchestrate.proto
+python -m grpc_tools.protoc \
+  --proto_path=$api_dir/protos \
+  --python_out=$output_dir \
+  --grpc_python_out=$output_dir \
+  orchestrate.proto
 
 # Fix weird Python import error when attempting to import orchestrate_pb2_grpc
 # because it cannot find its sibling orchestrate_pb2.

@@ -22,6 +22,8 @@ if [[ -z $project ]]; then
   exit 1
 fi
 
+ROLES=$(cat ${current_dir}/required.roles.txt)
+
 echo "Creating Orchestrate service account in project: $project"
 gcloud iam service-accounts create orchestrate \
   --project=$project \
@@ -34,18 +36,24 @@ gcloud iam service-accounts keys create $key_file \
   --project=$project \
   --iam-account="orchestrate@$project.iam.gserviceaccount.com"
 
-echo "Granting permissions"
-gcloud projects add-iam-policy-binding $project \
-  --member="serviceAccount:orchestrate@$project.iam.gserviceaccount.com" \
-  --role="roles/pubsub.publisher"
+echo "Adding roles..."
+for role in $ROLES; do
+  gcloud projects add-iam-policy-binding $project \
+    --member="serviceAccount:orchestrate@$project.iam.gserviceaccount.com" \
+    --role="$role"
+done
 
-gcloud projects add-iam-policy-binding $project \
-  --member="serviceAccount:orchestrate@$project.iam.gserviceaccount.com" \
-  --role="roles/errorreporting.writer"
-
-gcloud projects add-iam-policy-binding $project \
-  --member="serviceAccount:orchestrate@$project.iam.gserviceaccount.com" \
-  --role="projects/$project/roles/orchestrate.securityAdmin"
+# gcloud projects add-iam-policy-binding $project \
+#   --member="serviceAccount:orchestrate@$project.iam.gserviceaccount.com" \
+#   --role="roles/pubsub.publisher"
+# 
+# gcloud projects add-iam-policy-binding $project \
+#   --member="serviceAccount:orchestrate@$project.iam.gserviceaccount.com" \
+#   --role="roles/errorreporting.writer"
+# 
+# gcloud projects add-iam-policy-binding $project \
+#   --member="serviceAccount:orchestrate@$project.iam.gserviceaccount.com" \
+#   --role="projects/$project/roles/orchestrate.securityAdmin"
 
 echo "Done."
 
