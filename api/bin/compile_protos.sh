@@ -21,8 +21,11 @@ source $orchestrate_dir/environ.sh
 
 echo "Compiling protos..."
 
-python -m grpc_tools.protoc \
+python3 -m grpc_tools.protoc \
+  --include_imports \
+  --include_source_info \
   --proto_path=$api_dir/protos \
+  --descriptor_set_out=$api_dir/api_descriptor.pb \
   --python_out=$output_dir \
   --grpc_python_out=$output_dir \
   orchestrate.proto

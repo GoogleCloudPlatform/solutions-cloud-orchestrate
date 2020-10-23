@@ -19,21 +19,14 @@ service_dir=$cli_dir/orchestrate/service
 api_dir=$(realpath $bin_dir/../../api)
 
 echo "Compiling protos..."
-# python3 -m grpc_tools.protoc \
-#   --include_imports \
-#   --include_source_info \
-#   --proto_path=$api_dir/protos \
-#   --descriptor_set_out=api_descriptor.pb \
-#   --python_out=$service_dir \
-#   --grpc_python_out=$service_dir \
-#   orchestrate.proto
-
-python -m grpc.tools.protoc \
+python3 -m grpc_tools.protoc \
+  --include_imports \
+  --include_source_info \
   --proto_path=$api_dir/protos \
+  --descriptor_set_out=$api_dir/api_descriptor.pb \
   --python_out=$service_dir \
   --grpc_python_out=$service_dir \
   orchestrate.proto
-
 
 # Fix weird Python import error when attempting to import orchestrate_pb2_grpc
 # because it cannot find its sibling orchestrate_pb2.
