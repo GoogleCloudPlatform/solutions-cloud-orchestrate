@@ -94,8 +94,6 @@ Sets up service accounts, roles and permissions for Orchestrate orchestration.
     The following configuration changes are applied to the project:
     On project PROJECT_ID:
     - Create Orchestrate custom roles:
-      - roles/orchestrate.devOps
-      - roles/orchestrate.resourceManager
       - roles/orchestrate.user
     - Enable APIs:
       - compute engine
