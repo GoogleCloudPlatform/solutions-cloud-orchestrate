@@ -72,7 +72,8 @@ gcloud --project=$project container clusters create $cluster \
   --subnetwork=$subnetwork
 gcloud --project=$project container clusters update $cluster \
   --zone=$zone \
-  --logging-service logging.googleapis.com
+  --logging-service=logging.googleapis.com \
+  --monitoring-service=monitoring.googleapis.com
 
 echo "Provisioning service account credentials..."
 mkdir -p $HOME/.private

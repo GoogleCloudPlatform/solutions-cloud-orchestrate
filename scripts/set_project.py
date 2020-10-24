@@ -56,6 +56,7 @@ def main(arguments):
       'api/Dockerfile',
       'api/api_config.yaml',
       'api/deployment.yaml',
+      'project/required.roles.txt',
       'environ.sh',
   ]
   for file_name in file_names:

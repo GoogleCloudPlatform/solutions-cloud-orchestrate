@@ -22,18 +22,10 @@ source $orchestrate_dir/environ.sh
 # to LB, e.g.:
 # NAME         TYPE           CLUSTER-IP    EXTERNAL-IP    PORT(S)        AGE
 # grpc-hello   LoadBalancer   10.0.10.187   10.20.30.123   80:30586/TCP   43m
-echo "Getting load balancer's external IP..."
+
 while [[ -n `kubectl --context=$gke_context get svc orchestrate | grep '^orchestrate.*<pending>'` ]]; do
-  echo -n "."
   sleep 2
 done
-echo
-ip=`kubectl --context=$gke_context get svc orchestrate | grep '^orchestrate.*' | tr -s ' ' | cut -d ' ' -f 4`
-export ORCHESTRATE_API_HOST=$ip:80
 
-echo "ORCHESTRATE_API_HOST=$ORCHESTRATE_API_HOST"
-echo
-echo "Sample usage:"
-echo "orchestrate ... --api-project=$project --api-host=$ORCHESTRATE_API_HOST --api_key=\$ORCHESTRATE_API_KEY"
-echo "orchestrate ... --api-project=\$ORCHESTRATE_PROJECT --api-host=\$ORCHESTRATE_API_HOST --api_key=\$ORCHESTRATE_API_KEY"
-echo
+IP=`kubectl --context=$gke_context get svc orchestrate | jq -r '.status.loadBalancer.ingress[0].ip`
+echo $IP:80

@@ -1,6 +1,6 @@
 roles/pubsub.publisher 
 roles/errorreporting.writer 
-projects/$project/roles/orchestrate.securityAdmin
+projects/PLACEHOLDER_ORCHESTRATE_PROJECT/roles/orchestrate.securityAdmin
 roles/cloudkms.cryptoKeyEncrypterDecrypter
 roles/cloudkms.admin
 roles/compute.admin

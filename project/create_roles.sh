@@ -35,15 +35,15 @@ if [[ -z $project ]]; then
 fi
 
 echo "Creating or updating Orchestrate roles"
-echo "project: $project"
-echo "roles  : $roles"
+echo "   project: $project"
+echo "   roles  : $roles"
 
 for persona in $roles; do
   role="orchestrate.$persona"
   file="$current_dir/role.$role.json"
-  echo "Role: $role"
-  gcloud iam roles create $role --project $project --file $file \
-    || gcloud iam roles update $role --project $project --file $file
+  echo "  role: $role"
+  gcloud iam roles create --quiet $role --project $project --file $file \
+    || gcloud iam roles update --quiet $role --project $project --file $file
 done
 
 echo "Done."
