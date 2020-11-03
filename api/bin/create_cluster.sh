@@ -83,6 +83,6 @@ kubectl create secret generic service-account-key \
 echo "Creating deployment..."
 kubectl apply -f $api_dir/deployment.yaml
 
-source $current_dir/get_api_url.sh
+#source $current_dir/get_api_url.sh
 
 echo "Done."
