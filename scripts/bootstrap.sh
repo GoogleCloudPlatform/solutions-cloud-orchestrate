@@ -11,14 +11,13 @@
 DATE=`date`
 echo "*** START $0 $DATE ***"
 
-BRANCH=bootstrap #main
-
 export PROJECT=$(curl -sH Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/project/project-id)
 export ZONE=$(curl -sH Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/zone | cut -d/ -f4)
 export BOOTSTRAPPED=$(curl -sH Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/attributes/bootstrapped)
 export ORCHESTRATE_HOME=/opt/solutions-cloud-orchestrate
 export REPO_LOC=https://github.com/GoogleCloudPlatform/solutions-cloud-orchestrate.git
 export PROFILE=/etc/profile.d/orchestrate.sh
+export BRANCH=bootstrap #main
 
 if [ $BOOTSTRAPPED = TRUE ]; then
   echo "Machine already provisioned, exiting."
@@ -97,34 +96,37 @@ $ORCHESTRATE_HOME/services/deploy.sh \
   $ORCHESTRATE_HOME/services/image_provisioning_end
 
 # Create API Key.
-echo "*** Creating API key..."
-gcloud alpha services api-keys create \
-  --api-target=service=orchestrate.endpoints.$PROJECT.cloud.goog \
-  --display-name="Orchestrate API key"
-
-# Query values for config.
-echo "*** Getting values for API key..."
-KEY=`gcloud alpha services api-keys list --format=json --filter=displayName:"Orchestrate API" | jq -r '.[0].name'`
-API_KEY=`gcloud alpha services api-keys get-key-string --format=json $KEY | jq -r '.keyString'`
-LB_IP=$($ORCHESTRATE_HOME/api/bin/get_api_url.sh)
-
-# Build .config file.
-echo "*** Building Orchestrate .config file..."
-mkdir -p /etc/skel/.config/orchestrate
-cat << EOF > /etc/skel/.config/orchestrate/config_default
-[api]
-project = $PROJECT
-host = $LB_IP
-key = $API_KEY
-EOF
-
-echo "*** Compileing protos..."
-$ORCHESTRATE_HOME/bin/compile_protos.sh
-cd $ORCHESTRATE_HOME/cli
-python setup.py develop
-
-echo "*** Registering project..."
-orchestrate projects register
+# TODO: This command is still in alpha and is only possible on whitelisted
+# projects, according to launch/291349.
+# Therefore the script must stop here until un-blocked.
+# echo "*** Creating API key..."
+# gcloud alpha services api-keys create \
+#   --api-target=service=orchestrate.endpoints.$PROJECT.cloud.goog \
+#   --display-name="Orchestrate API key"
+# 
+# # Query values for config.
+# echo "*** Getting values for API key..."
+# KEY=`gcloud alpha services api-keys list --format=json --filter=displayName:"Orchestrate API" | jq -r '.[0].name'`
+# API_KEY=`gcloud alpha services api-keys get-key-string --format=json $KEY | jq -r '.keyString'`
+# LB_IP=$($ORCHESTRATE_HOME/api/bin/get_api_url.sh)
+# 
+# # Build .config file.
+# echo "*** Building Orchestrate .config file..."
+# mkdir -p /etc/skel/.config/orchestrate
+# cat << EOF > /etc/skel/.config/orchestrate/config_default
+# [api]
+# project = $PROJECT
+# host = $LB_IP
+# key = $API_KEY
+# EOF
+# 
+# echo "*** Compiling protos..."
+# $ORCHESTRATE_HOME/bin/compile_protos.sh
+# cd $ORCHESTRATE_HOME/cli
+# python setup.py develop
+# 
+# echo "*** Registering project..."
+# orchestrate projects register
 
 # Finally, set metadata, marking machine as complete.
 echo "*** Setting instance metadata..."
