@@ -35,6 +35,8 @@ mkdir -p $(dirname $key_file)
 gcloud iam service-accounts keys create $key_file \
   --project=$project \
   --iam-account="orchestrate@$project.iam.gserviceaccount.com"
+chmod 644 $key_file
+chgrp adm $(dirname $key_file)
 
 echo "Adding roles..."
 for role in $ROLES; do
