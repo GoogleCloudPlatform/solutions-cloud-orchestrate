@@ -27,7 +27,7 @@ if [ $BOOTSTRAPPED = TRUE ]; then
   exit 0
 fi
 
-# Build profile.d.
+# Build profile for all users.
 
 echo $SEP
 echo "*** Building profile.d..." 
@@ -45,7 +45,7 @@ apt-get install -y git python3-pip kubectl software-properties-common unzip acl 
 # Build Cloud Orchestrate environment.
 echo $SEP
 echo "*** Provisioning $ORCHESTRATE_HOME..."
-mkdir --mode=0775 $ORCHESTRATE_HOME
+mkdir --mode=0777 $ORCHESTRATE_HOME
 setfacl -Rdm g:adm:rw $ORCHESTRATE_HOME
 
 # Clone based on branch.
