@@ -27,5 +27,5 @@ while [[ -n `kubectl --context=$gke_context get svc orchestrate | grep '^orchest
   sleep 2
 done
 
-IP=`kubectl --context=$gke_context get svc orchestrate | jq -r '.status.loadBalancer.ingress[0].ip'`
+IP=`kubectl --context=$gke_context get svc orchestrate --output=json | jq -r '.status.loadBalancer.ingress[0].ip'`
 echo $IP:80
