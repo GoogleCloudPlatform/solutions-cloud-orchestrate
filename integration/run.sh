@@ -19,7 +19,7 @@ orchestrate_dir=$(dirname $integration_dir)
 source $orchestrate_dir/environ.sh
 
 export ORCHESTRATE_API_HOST=localhost:50051
-export GOOGLE_APPLICATION_CREDENTIALS=~/.private/${ORCHESTRATE_PROJECT}.json
+export GOOGLE_APPLICATION_CREDENTIALS=$ORCHESTRATE_HOME/.private/${ORCHESTRATE_PROJECT}.json
 
 echo "Running integration tests..."
 echo "ORCHESTRATE_PROJECT           : $ORCHESTRATE_PROJECT"

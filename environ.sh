@@ -17,3 +17,4 @@ bucket="gs://${project}"
 gke_context="gke_${project}_us-central1-a_orchestrate"
 
 export ORCHESTRATE_PROJECT=$project
+export ORCHESTRATE_HOME=/opt/solutions-cloud-orchestrate

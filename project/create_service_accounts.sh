@@ -29,7 +29,7 @@ gcloud iam service-accounts create orchestrate \
   --project=$project \
   --display-name="Orchestrate main orchestration service account."
 
-key_file=$HOME/.private/$project.json
+key_file=$ORCHESTRATE_HOME/.private/$project.json
 echo "Creating account key: $key_file"
 mkdir -p $(dirname $key_file)
 gcloud iam service-accounts keys create $key_file \

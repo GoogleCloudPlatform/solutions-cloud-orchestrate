@@ -1,14 +1,17 @@
 #!/bin/sh
 
+# TODO: boilerplate
+
 # Use this bootstrap script to install and initialize the 
 # Cloud Orchestrate API on a Debian 10 VM. It performs
 # The following tasks:
-#   - Install core API dependencies.
-#   - Install Cloud Orchestrate repository.
-#   - Build and enter Cloud Orchestrate environment.
-#   - Deploy Cloud Orchestrate components.
+#   - Installs core API dependencies.
+#   - Installs Cloud Orchestrate repository.
+#   - Builds and enters Cloud Orchestrate environment.
+#   - Deploy initial Cloud Orchestrate components.
 
 DATE=`date`
+SEP="***************************************************************"
 echo "*** START $0 $DATE ***"
 
 export PROJECT=$(curl -sH Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/project/project-id)
@@ -26,6 +29,7 @@ fi
 
 # Build profile.d.
 
+echo $SEP
 echo "*** Building profile.d..." 
 echo "export PROJECT=\$(curl -sH Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/project/project-id)" >> $PROFILE
 echo "export ZONE=\$(curl -sH Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/zone | cut -d/ -f4)" >> $PROFILE
@@ -33,68 +37,72 @@ echo "export ORCHESTRATE_HOME=/opt/solutions-cloud-orchestrate" >> $PROFILE
 echo "source /usr/lib/google-cloud-sdk/completion.bash.inc" >> $PROFILE
 
 # Update OS.
+echo $SEP
 echo "*** Updating OS..."
 apt-get update
 apt-get install -y git python3-pip kubectl software-properties-common unzip acl jq
 
 # Build Cloud Orchestrate environment.
+echo $SEP
 echo "*** Provisioning $ORCHESTRATE_HOME..."
 mkdir --mode=0775 $ORCHESTRATE_HOME
 setfacl -Rdm g:adm:rw $ORCHESTRATE_HOME
 
 # Clone based on branch.
+echo $SEP
 echo "*** Cloning $REPO_LOC..."
 git clone --branch $BRANCH $REPO_LOC $ORCHESTRATE_HOME
 chgrp -R adm $ORCHESTRATE_HOME
 
+echo $SEP
 echo "*** Installing Python libs with pip3..."
 pip3 install --upgrade pip
 pip3 install google google-cloud google-cloud-pubsub google-cloud-error-reporting google-api-python-client grpcio grpcio-tools requests oauth2client setuptools_scm
 
-echo
+echo $SEP
 echo "$ORCHESTRATE_HOME/scripts/set_project.py $PROJECT"
 $ORCHESTRATE_HOME/scripts/set_project.py $PROJECT
 
-echo
+echo $SEP
 echo "$ORCHESTRATE_HOME/project/enable_apis.sh"
 $ORCHESTRATE_HOME/project/enable_apis.sh
 
-echo
+echo $SEP
 echo "$ORCHESTRATE_HOME/project/create_buckets.sh"
 $ORCHESTRATE_HOME/project/create_buckets.sh
 
-echo
+echo $SEP
 echo "$ORCHESTRATE_HOME/project/create_roles.sh"
 $ORCHESTRATE_HOME/project/create_roles.sh
 
-echo
+echo $SEP
 echo "$ORCHESTRATE_HOME/project/create_service_accounts.sh"
 $ORCHESTRATE_HOME/project/create_service_accounts.sh
 
-echo
+echo $SEP
 echo "$ORCHESTRATE_HOME/project/create_topics.sh"
 $ORCHESTRATE_HOME/project/create_topics.sh
 
-echo
-echo "$ORCHESTRATE_HOME/api/bin/create_cluster.sh"
-$ORCHESTRATE_HOME/api/bin/create_cluster.sh
-
-echo
-echo "$ORCHESTRATE_HOME/scripts/deploy.sh"
-$ORCHESTRATE_HOME/scripts/deploy.sh
-
-echo
-echo "$ORCHESTRATE_HOME/services/deploy.sh \
-  $ORCHESTRATE_HOME/services/image_provisioning_start"
-$ORCHESTRATE_HOME/services/deploy.sh \
-  $ORCHESTRATE_HOME/services/image_provisioning_start
-
-echo
-echo "$ORCHESTRATE_HOME/services/deploy.sh \
-  $ORCHESTRATE_HOME/services/image_provisioning_end"
-$ORCHESTRATE_HOME/services/deploy.sh \
-  $ORCHESTRATE_HOME/services/image_provisioning_end
-
+# echo
+# echo "$ORCHESTRATE_HOME/api/bin/create_cluster.sh"
+# $ORCHESTRATE_HOME/api/bin/create_cluster.sh
+# 
+# echo
+# echo "$ORCHESTRATE_HOME/scripts/deploy.sh"
+# $ORCHESTRATE_HOME/scripts/deploy.sh
+# 
+# echo
+# echo "$ORCHESTRATE_HOME/services/deploy.sh \
+#   $ORCHESTRATE_HOME/services/image_provisioning_start"
+# $ORCHESTRATE_HOME/services/deploy.sh \
+#   $ORCHESTRATE_HOME/services/image_provisioning_start
+# 
+# echo
+# echo "$ORCHESTRATE_HOME/services/deploy.sh \
+#   $ORCHESTRATE_HOME/services/image_provisioning_end"
+# $ORCHESTRATE_HOME/services/deploy.sh \
+#   $ORCHESTRATE_HOME/services/image_provisioning_end
+# 
 # Create API Key.
 # TODO: This command is still in alpha and is only possible on whitelisted
 # projects, according to launch/291349.
@@ -106,8 +114,8 @@ $ORCHESTRATE_HOME/services/deploy.sh \
 # 
 # # Query values for config.
 # echo "*** Getting values for API key..."
-# KEY=`gcloud alpha services api-keys list --format=json --filter=displayName:"Orchestrate API" | jq -r '.[0].name'`
-# API_KEY=`gcloud alpha services api-keys get-key-string --format=json $KEY | jq -r '.keyString'`
+# KEY=$(gcloud alpha services api-keys list --format=json --filter=displayName:"Orchestrate API" | jq -r '.[0].name')
+# API_KEY=$(gcloud alpha services api-keys get-key-string --format=json $KEY | jq -r '.keyString')
 # LB_IP=$($ORCHESTRATE_HOME/api/bin/get_api_url.sh)
 # 
 # # Build .config file.
@@ -136,3 +144,4 @@ gcloud compute instances add-metadata orchestrate-cmd \
 
 DATE=`date`
 echo "*** END $0 $DATE ***"
+echo $SEP

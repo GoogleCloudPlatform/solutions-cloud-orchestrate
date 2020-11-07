@@ -76,9 +76,9 @@ gcloud --project=$project container clusters update $cluster \
   --monitoring-service=monitoring.googleapis.com
 
 echo "Provisioning service account credentials..."
-mkdir -p $HOME/.private
+#mkdir -p $HOME/.private
 kubectl create secret generic service-account-key \
-  --from-file=key.json=$HOME/.private/$project.json
+  --from-file=key.json=$ORCHESTRATE_HOME/.private/$project.json
 
 echo "Creating deployment..."
 kubectl apply -f $api_dir/deployment.yaml
