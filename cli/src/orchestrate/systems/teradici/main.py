@@ -146,7 +146,7 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
 
     if not self.public_ssh_key_file:
       self.public_ssh_key_file = (
-          '{self.deploy_dir}/{self.project}-{self.service_account_name}'
+          '{self.deploy_dir}/{self.project}-{self.service_account_name}.pub'
           ).format(self=self)
 
     self.connector_token = None
