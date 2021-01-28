@@ -126,16 +126,16 @@ Sets up service accounts, roles and permissions for Orchestrate orchestration.
     project_account = 'orchestrate@{project}.iam.gserviceaccount.com'.format(
         project=options.project)
     commands = """
-gcloud services enable compute.googleapis.com --project={project}
-gcloud services enable pubsub.googleapis.com --project={project}
-gcloud services enable cloudresourcemanager.googleapis.com --project={project}
-gcloud services enable dns.googleapis.com --project={project}
-gcloud projects add-iam-policy-binding {project} --member="serviceAccount:{orchestrate_account}" --role="projects/{project}/roles/orchestrate.devOps"
-gcloud projects add-iam-policy-binding {project} --member="serviceAccount:{orchestrate_account}" --role="roles/iam.serviceAccountUser"
-gcloud iam service-accounts create orchestrate --display-name="Orchestrate project-level orchestration service account." --project={project}
-gcloud projects add-iam-policy-binding {project} --member="serviceAccount:{project_account}" --role="roles/iam.serviceAccountUser"
-gcloud projects add-iam-policy-binding {project} --member="serviceAccount:{project_account}" --role="roles/logging.logWriter"
-gcloud projects add-iam-policy-binding {project} --member="serviceAccount:{project_account}" --role="roles/monitoring.metricWriter"
+gcloud services enable compute.googleapis.com --project={project} --quiet
+gcloud services enable pubsub.googleapis.com --project={project} --quiet
+gcloud services enable cloudresourcemanager.googleapis.com --project={project} --quiet
+gcloud services enable dns.googleapis.com --project={project} --quiet
+gcloud projects add-iam-policy-binding {project} --member="serviceAccount:{orchestrate_account}" --role="projects/{project}/roles/orchestrate.devOps" --quiet
+gcloud projects add-iam-policy-binding {project} --member="serviceAccount:{orchestrate_account}" --role="roles/iam.serviceAccountUser" --quiet
+gcloud iam service-accounts create orchestrate --display-name="Orchestrate project-level orchestration service account." --project={project} --quiet
+gcloud projects add-iam-policy-binding {project} --member="serviceAccount:{project_account}" --role="roles/iam.serviceAccountUser" --quiet
+gcloud projects add-iam-policy-binding {project} --member="serviceAccount:{project_account}" --role="roles/logging.logWriter" --quiet
+gcloud projects add-iam-policy-binding {project} --member="serviceAccount:{project_account}" --role="roles/monitoring.metricWriter" --quiet
 """.format(
     project=options.project,
     orchestrate_account=orchestrate_account,
@@ -261,7 +261,7 @@ gcloud projects add-iam-policy-binding {project} --member="serviceAccount:{proje
         command = (
             'gcloud iam roles create {name} --project={project}'
             ' --title="{title}" --description="{description}"'
-            ' --permissions={permissions} --stage={stage}').format(
+            ' --permissions={permissions} --stage={stage} --quiet').format(
                 project=options.project,
                 permissions=permissions,
                 **role,
@@ -273,7 +273,7 @@ gcloud projects add-iam-policy-binding {project} --member="serviceAccount:{proje
         command = (
             'gcloud iam roles update {name} --project={project}'
             ' --title="{title}" --description="{description}"'
-            ' --permissions={permissions} --stage={stage}').format(
+            ' --permissions={permissions} --stage={stage} --quiet').format(
                 project=options.project,
                 permissions=permissions,
                 **role,
