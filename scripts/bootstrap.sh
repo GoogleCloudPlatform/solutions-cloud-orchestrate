@@ -56,6 +56,14 @@ apt-get update
 apt-get install -y git virtualenv python3-pip kubectl \
   software-properties-common unzip acl jq
 
+# Install Python libraries.
+echo $SEP
+echo "*** Installing Python libraries..."
+pip3 install --upgrade pip
+pip3 install google google-cloud google-cloud-pubsub \
+  google-cloud-error-reporting google-api-python-client \
+  grpcio grpcio-tools requests oauth2client setuptools_scm
+
 # Build Cloud Orchestrate environment.
 echo $SEP
 echo "*** Provisioning $ORCHESTRATE_HOME..."
