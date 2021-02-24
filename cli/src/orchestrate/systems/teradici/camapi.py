@@ -113,6 +113,10 @@ class CloudAccessManager(Namespace):
 
     if not token and project and scope:
       scope_name = scope.name.lower()
+
+      # Hard-code scope so we only deal with a single credentials file.
+      scope_name = 'cam'
+
       log.debug('Locating CAM service account credentials using project %s'
                 ' and scope %s', project, scope_name)
       file_name = '~/.config/teradici/{project}-{scope}.json'.format(
