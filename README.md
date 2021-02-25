@@ -6,7 +6,7 @@
 
 Cloud Orchestrate is intended for content creation workloads such as VFX/animation, ArchViz, game development, manufacturing and engineering, or any industry workload that requires access to powerful virtual workstations. Resources can be distributed in any region for low-latency performance anywhere in the world, and storage strategies can be defined to allow global access to common assets.
 
-Cloud Orchestrate is a solution that includes open source software, cloud-native services, and third-party software products such as Teradici [Cloud Access Software](https://www.teradici.com/solutions-services/cloud-access-plus).
+Cloud Orchestrate is a solution that includes open source software, cloud-native services, and third-party software products such as Teradici [Cloud Access Software](https://www.teradici.com/solutions-services/cloud-access-plus) and [Cloud Access Manager](https://www.teradici.com/web-help/pcoip_cloud_access_manager/CACv2/).
 
 Watch this [video overview](https://youtu.be/hoZZtNItc5Y) to see what's possible with a deployment created with Cloud Orchestrate.
 
