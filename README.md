@@ -2,17 +2,19 @@
 
 ## About the project
 
-### Built with
+**Cloud Orchestrate** makes it easy to deploy and manage fleets of virtual workstations and entire systems on Google Cloud with a high-level API.
 
 ## Getting started
 
-See the [wiki](https://github.com/GoogleCloudPlatform/solutions-cloud-orchestrate/wiki) for full Cloud Orchestrate documentation.
+See the [wiki](https://github.com/GoogleCloudPlatform/solutions-cloud-orchestrate/wiki) for full documentation.
 
-### Prerequisites
+## Prerequisites
+
+To deploy Cloud Orchestrate,  you should have a basic working knowledge of Google Cloud Platform and are familiar with [Compute Engine](https://cloud.google.com/compute) and the [Google Cloud Console](https://console.cloud.google.com/).
 
 ## License
 
-Distributed under the Apache 2.0 License. See `LICENSE` for more information.
+Distributed under the Apache 2.0 License. See [LICENSE](LICENSE) for more information.
 
 ## Contact
 
