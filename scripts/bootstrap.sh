@@ -64,13 +64,13 @@ apt-get install -y git virtualenv python3-pip kubectl \
 echo $SEP
 echo "*** Provisioning $ORCHESTRATE_HOME..."
 mkdir --mode=0777 $ORCHESTRATE_HOME
-setfacl -Rdm g:adm:rw $ORCHESTRATE_HOME
+setfacl -Rdm g:adm:rwx $ORCHESTRATE_HOME
 
 # Build Cloud Orchestrate virtualenv.
 echo $SEP
 echo "*** Provisioning $ORCHESTRATE_VIRTUALENV..."
 mkdir --mode=0777 $ORCHESTRATE_VIRTUALENV
-setfacl -Rdm g:adm:rw $ORCHESTRATE_VIRTUALENV
+setfacl -Rdm g:adm:rwx $ORCHESTRATE_VIRTUALENV
 virtualenv -p `which python3` /opt/orchestrate
 chgrp -R adm $ORCHESTRATE_VIRTUALENV
 
