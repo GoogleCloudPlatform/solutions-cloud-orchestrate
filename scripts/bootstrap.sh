@@ -32,8 +32,8 @@ export ORCHESTRATE_HOME=/opt/solutions-cloud-orchestrate
 export ORCHESTRATE_VIRTUALENV=/opt/orchestrate
 export REPO_LOC=https://github.com/GoogleCloudPlatform/solutions-cloud-orchestrate.git
 export PROFILE=/etc/profile.d/orchestrate.sh
-export BRANCH=bootstrap #main
-export BOOTSTRAP_VERSION=1.8
+export BRANCH=main
+export BOOTSTRAP_VERSION=1.9
 
 echo $SEP
 echo "Running bootstrap version $BOOTSTRAP_VERSION..."
