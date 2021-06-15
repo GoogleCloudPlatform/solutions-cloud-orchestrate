@@ -27,6 +27,8 @@ subnetwork=default
 # format and be lexicographically greater than this tag.
 tag=20190619t000000
 
+CLUSTER_VERSION=1.17.17-gke.4900
+
 while getopts ":z:n:s:h" option; do
   case $option in
     z) zone=$OPTARG ;;
@@ -66,7 +68,7 @@ gcloud --project=$project builds submit --tag gcr.io/$project/orchestrate:$tag $
 
 echo "Creating cluster $cluster..."
 gcloud --project=$project container clusters create $cluster \
-  --cluster-version=1.15.12-gke.6002 \
+  --cluster-version=$CLUSTER_VERSION \
   --zone=$zone \
   --network=$network \
   --subnetwork=$subnetwork
