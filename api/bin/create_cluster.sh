@@ -27,7 +27,7 @@ subnetwork=default
 # format and be lexicographically greater than this tag.
 tag=20190619t000000
 
-CLUSTER_VERSION=1.17.17-gke.4900
+CLUSTER_VERSION=1.18.17-gke.100
 
 while getopts ":z:n:s:h" option; do
   case $option in
