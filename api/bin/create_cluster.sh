@@ -72,8 +72,8 @@ gcloud --project=$project container clusters create $cluster \
   --subnetwork=$subnetwork
 gcloud --project=$project container clusters update $cluster \
   --zone=$zone \
-  --logging-service=logging.googleapis.com \
-  --monitoring-service=monitoring.googleapis.com
+  --logging=SYSTEM,WORKLOAD \
+  --monitoring=SYSTEM
 
 echo "Provisioning service account credentials..."
 kubectl create secret generic service-account-key \
