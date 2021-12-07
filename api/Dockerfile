@@ -19,15 +19,16 @@ FROM gcr.io/google_appengine/python
 
 # Create a virtualenv for dependencies. This isolates these packages from
 # system-level packages.
-RUN virtualenv -p python3.5 /env
+RUN virtualenv -p python3 /env
 
 # Setting these environment variables are the same as running
 # source /env/bin/activate.
-ENV VIRTUAL_ENV -p python3.5 /env
+ENV VIRTUAL_ENV -p python3 /env
 ENV PATH /env/bin:$PATH
 ENV ORCHESTRATE_PROJECT PLACEHOLDER_ORCHESTRATE_PROJECT
 
 COPY requirements.txt /app
+RUN pip install --upgrade pip
 RUN pip install --requirement /app/requirements.txt
 COPY . /app/
 WORKDIR /app
