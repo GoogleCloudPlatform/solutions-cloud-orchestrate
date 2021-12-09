@@ -228,7 +228,7 @@ class ProvisionImageService:
         zone=zone,
         ).execute()
     for gpu in response['items']:
-      # e.g. nvidia-tesla-p4-vws to ['nvidia', 'tesla', 'p4', 'vws']
+      # e.g. nvidia-tesla-t4-vws to ['nvidia', 'tesla', 't4', 'vws']
       gpu_name_parts = gpu['name'].split('-')
       if gpu['name'].endswith('-vws') and gpu_name_parts[2] in ('t4', 'p4'):
         return gpu['name']

@@ -53,7 +53,7 @@ Typical usage:
 
   gcloud compute instances create YOUR_VM_NAME \
     --machine-type=custom-24-32768 \
-    --accelerator=type=nvidia-tesla-p4-vws,count=1 \
+    --accelerator=type=nvidia-tesla-t4-vws,count=1 \
     --can-ip-forward \
     --maintenance-policy TERMINATE \
     --tags 'https-server' \

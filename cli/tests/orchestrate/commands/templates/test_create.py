@@ -118,7 +118,7 @@ def test_execution_with_one_custom_size(execute):
       '--memory=12',
       '--disk-size=13',
       '--disk-type=pd-ssd',
-      '--gpu-type=nvidia-tesla-p4-vws',
+      '--gpu-type=nvidia-tesla-t4-vws',
       '--gpu-count=14',
       '--size-name=user_size',
       '--default-size-name=user_size',
@@ -157,7 +157,7 @@ def test_execution_with_one_custom_size(execute):
   assert request.template.sizes[0].memory == 12
   assert request.template.sizes[0].disk_size == 13
   assert request.template.sizes[0].disk_type == 'pd-ssd'
-  assert request.template.sizes[0].gpu_type == 'nvidia-tesla-p4-vws'
+  assert request.template.sizes[0].gpu_type == 'nvidia-tesla-t4-vws'
   assert request.template.sizes[0].gpu_count == 14
   assert request.template.default_size_name == 'user_size'
   assert not request.template.instance_name_pattern
@@ -181,9 +181,9 @@ def test_execution_with_many_custom_sizes(execute):
       (
           '--sizes='
           'name=user_size1,cpus=11,memory=12,disk-size=13,'
-          'gpu-type=nvidia-tesla-p4-vws,gpu-count=14:'
+          'gpu-type=nvidia-tesla-t4-vws,gpu-count=14:'
           'name=user_size2,cpus=21,memory=22,disk-size=23,'
-          'gpu-type=nvidia-tesla-p4-vws,gpu-count=24'
+          'gpu-type=nvidia-tesla-t4-vws,gpu-count=24'
       ),
       '--default-size-name=user_size1',
   ])
@@ -220,13 +220,13 @@ def test_execution_with_many_custom_sizes(execute):
   assert request.template.sizes[0].cpus == 11
   assert request.template.sizes[0].memory == 12
   assert request.template.sizes[0].disk_size == 13
-  assert request.template.sizes[0].gpu_type == 'nvidia-tesla-p4-vws'
+  assert request.template.sizes[0].gpu_type == 'nvidia-tesla-t4-vws'
   assert request.template.sizes[0].gpu_count == 14
   assert request.template.sizes[1].name == 'user_size2'
   assert request.template.sizes[1].cpus == 21
   assert request.template.sizes[1].memory == 22
   assert request.template.sizes[1].disk_size == 23
-  assert request.template.sizes[1].gpu_type == 'nvidia-tesla-p4-vws'
+  assert request.template.sizes[1].gpu_type == 'nvidia-tesla-t4-vws'
   assert request.template.sizes[1].gpu_count == 24
   assert request.template.default_size_name == 'user_size1'
   assert not request.template.instance_name_pattern
