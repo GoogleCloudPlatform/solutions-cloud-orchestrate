@@ -152,7 +152,7 @@ roles/cloudkms.cryptoKeyEncrypterDecrypter
     self.connector_token = None
 
     if self.windows_accelerator_type is None:
-      if self.region in ['us-west2', 'us-east4', 'northamerica-northeast1']:
+      if self.region in ['us-east4', 'northamerica-northeast1']:
         self.windows_accelerator_type = 'nvidia-tesla-p4-vws'
       else:
         self.windows_accelerator_type = 'nvidia-tesla-t4-vws'

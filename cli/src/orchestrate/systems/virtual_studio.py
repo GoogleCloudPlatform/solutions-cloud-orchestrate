@@ -383,7 +383,7 @@ class VirtualStudio(base.OrchestrateSystem):
       return
 
     if not self.gpu_type:
-      if self.region in ['us-west2', 'us-east4', 'northamerica-northeast1']:
+      if self.region in ['us-east4', 'northamerica-northeast1']:
         self.gpu_type = 'p4-vws'
       else:
         self.gpu_type = 't4-vws'
